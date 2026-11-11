@@ -1,0 +1,3 @@
+/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/build/CMakeFiles/mini_gcs.dir
+/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/build/CMakeFiles/edit_cache.dir
+/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/build/CMakeFiles/rebuild_cache.dir

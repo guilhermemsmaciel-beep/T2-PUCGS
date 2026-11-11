@@ -1,0 +1,74 @@
+[
+{
+  "directory": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/build",
+  "command": "/opt/homebrew/opt/ccache/libexec/c++ -DMAVSDK_SHARED -I/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src -isystem /opt/homebrew/include -isystem /opt/homebrew/include/mavsdk -O3 -DNDEBUG -std=c++17 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/mini_gcs.dir/src/main.cpp.o -c /Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/main.cpp",
+  "file": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/main.cpp",
+  "output": "CMakeFiles/mini_gcs.dir/src/main.cpp.o"
+},
+{
+  "directory": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/build",
+  "command": "/opt/homebrew/opt/ccache/libexec/c++ -DMAVSDK_SHARED -I/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src -isystem /opt/homebrew/include -isystem /opt/homebrew/include/mavsdk -O3 -DNDEBUG -std=c++17 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/mini_gcs.dir/src/EstacaoDeControle.cpp.o -c /Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/EstacaoDeControle.cpp",
+  "file": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/EstacaoDeControle.cpp",
+  "output": "CMakeFiles/mini_gcs.dir/src/EstacaoDeControle.cpp.o"
+},
+{
+  "directory": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/build",
+  "command": "/opt/homebrew/opt/ccache/libexec/c++ -DMAVSDK_SHARED -I/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src -isystem /opt/homebrew/include -isystem /opt/homebrew/include/mavsdk -O3 -DNDEBUG -std=c++17 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/mini_gcs.dir/src/modelo/Telemetria.cpp.o -c /Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/modelo/Telemetria.cpp",
+  "file": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/modelo/Telemetria.cpp",
+  "output": "CMakeFiles/mini_gcs.dir/src/modelo/Telemetria.cpp.o"
+},
+{
+  "directory": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/build",
+  "command": "/opt/homebrew/opt/ccache/libexec/c++ -DMAVSDK_SHARED -I/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src -isystem /opt/homebrew/include -isystem /opt/homebrew/include/mavsdk -O3 -DNDEBUG -std=c++17 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/mini_gcs.dir/src/modelo/Veiculo.cpp.o -c /Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/modelo/Veiculo.cpp",
+  "file": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/modelo/Veiculo.cpp",
+  "output": "CMakeFiles/mini_gcs.dir/src/modelo/Veiculo.cpp.o"
+},
+{
+  "directory": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/build",
+  "command": "/opt/homebrew/opt/ccache/libexec/c++ -DMAVSDK_SHARED -I/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src -isystem /opt/homebrew/include -isystem /opt/homebrew/include/mavsdk -O3 -DNDEBUG -std=c++17 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/mini_gcs.dir/src/modelo/Drone.cpp.o -c /Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/modelo/Drone.cpp",
+  "file": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/modelo/Drone.cpp",
+  "output": "CMakeFiles/mini_gcs.dir/src/modelo/Drone.cpp.o"
+},
+{
+  "directory": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/build",
+  "command": "/opt/homebrew/opt/ccache/libexec/c++ -DMAVSDK_SHARED -I/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src -isystem /opt/homebrew/include -isystem /opt/homebrew/include/mavsdk -O3 -DNDEBUG -std=c++17 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/mini_gcs.dir/src/modelo/Historico.cpp.o -c /Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/modelo/Historico.cpp",
+  "file": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/modelo/Historico.cpp",
+  "output": "CMakeFiles/mini_gcs.dir/src/modelo/Historico.cpp.o"
+},
+{
+  "directory": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/build",
+  "command": "/opt/homebrew/opt/ccache/libexec/c++ -DMAVSDK_SHARED -I/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src -isystem /opt/homebrew/include -isystem /opt/homebrew/include/mavsdk -O3 -DNDEBUG -std=c++17 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/mini_gcs.dir/src/cli/Comando.cpp.o -c /Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/cli/Comando.cpp",
+  "file": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/cli/Comando.cpp",
+  "output": "CMakeFiles/mini_gcs.dir/src/cli/Comando.cpp.o"
+},
+{
+  "directory": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/build",
+  "command": "/opt/homebrew/opt/ccache/libexec/c++ -DMAVSDK_SHARED -I/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src -isystem /opt/homebrew/include -isystem /opt/homebrew/include/mavsdk -O3 -DNDEBUG -std=c++17 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/mini_gcs.dir/src/cli/ComandosPadrao.cpp.o -c /Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/cli/ComandosPadrao.cpp",
+  "file": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/cli/ComandosPadrao.cpp",
+  "output": "CMakeFiles/mini_gcs.dir/src/cli/ComandosPadrao.cpp.o"
+},
+{
+  "directory": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/build",
+  "command": "/opt/homebrew/opt/ccache/libexec/c++ -DMAVSDK_SHARED -I/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src -isystem /opt/homebrew/include -isystem /opt/homebrew/include/mavsdk -O3 -DNDEBUG -std=c++17 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/mini_gcs.dir/src/cli/Console.cpp.o -c /Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/cli/Console.cpp",
+  "file": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/cli/Console.cpp",
+  "output": "CMakeFiles/mini_gcs.dir/src/cli/Console.cpp.o"
+},
+{
+  "directory": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/build",
+  "command": "/opt/homebrew/opt/ccache/libexec/c++ -DMAVSDK_SHARED -I/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src -isystem /opt/homebrew/include -isystem /opt/homebrew/include/mavsdk -O3 -DNDEBUG -std=c++17 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/mini_gcs.dir/src/visual/Painel.cpp.o -c /Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/visual/Painel.cpp",
+  "file": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/visual/Painel.cpp",
+  "output": "CMakeFiles/mini_gcs.dir/src/visual/Painel.cpp.o"
+},
+{
+  "directory": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/build",
+  "command": "/opt/homebrew/opt/ccache/libexec/c++ -DMAVSDK_SHARED -I/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src -isystem /opt/homebrew/include -isystem /opt/homebrew/include/mavsdk -O3 -DNDEBUG -std=c++17 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/mini_gcs.dir/src/visual/GraficoTempo.cpp.o -c /Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/visual/GraficoTempo.cpp",
+  "file": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/visual/GraficoTempo.cpp",
+  "output": "CMakeFiles/mini_gcs.dir/src/visual/GraficoTempo.cpp.o"
+},
+{
+  "directory": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/build",
+  "command": "/opt/homebrew/opt/ccache/libexec/c++ -DMAVSDK_SHARED -I/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src -isystem /opt/homebrew/include -isystem /opt/homebrew/include/mavsdk -O3 -DNDEBUG -std=c++17 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/mini_gcs.dir/src/visual/HorizonteArtificial.cpp.o -c /Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/visual/HorizonteArtificial.cpp",
+  "file": "/Users/maciel/PROGRAMACAO/OOP/T2_OOP/PUGCS-main/src/visual/HorizonteArtificial.cpp",
+  "output": "CMakeFiles/mini_gcs.dir/src/visual/HorizonteArtificial.cpp.o"
+}
+]
