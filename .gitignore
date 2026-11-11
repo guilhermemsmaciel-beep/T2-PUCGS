@@ -2,4 +2,5 @@
 mavsdk_server_macos_arm64
 
 # Ignorar pasta ardupilot
-ardupilot /
+ardupilot/
+.vscode/
