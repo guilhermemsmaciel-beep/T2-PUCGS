@@ -74,11 +74,13 @@ public:
     // TODO (aluno): declare aqui o resto do contrato que a sua GCS precisa e
     // implemente nas subclasses:
     //
-    //     virtual void armar() = 0;
-    //     virtual void desarmar() = 0;
-    //     virtual void decolar(double altura_m) = 0;
-    //     virtual void pousar() = 0;
-    //     virtual void retornar_para_casa() = 0;
+    virtual void armar() = 0;
+    virtual void desarmar() = 0;
+    virtual void decolar(double altura_m) = 0;
+    virtual void pousar() = 0;
+    virtual void retornar_para_casa() = 0;
+    virtual void gravar() = 0;
+    virtual void limpar() = 0;
 
 protected:
     /// Modifica o estado e notifica os observadores.
@@ -112,6 +114,12 @@ public:
     void conectar() override;
     void iniciar_telemetria() override;
     void alterar_modo_de_voo(const std::string& modo) override;
+    void armar() override ;
+    void desarmar() override ;
+    void decolar(double altura_m) override ;
+    void pousar() override ;
+    void retornar_para_casa() override;
+    void gravar() override;
 
 private:
     void laco_de_telemetria();

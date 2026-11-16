@@ -34,6 +34,19 @@ struct Bateria {
     double percentual = 0.0;  // 0 a 100
 };
 
+struct Satelite {
+
+};
+
+struct Radio {
+    double frequencia = 0.0;
+    
+};
+
+struct Home {
+    Posicao coordenadas = {0.0, 0.0, 0.0, 0.0};
+};
+
 /// Fotografia completa do veículo em um instante.
 ///
 /// TODO (aluno): acrescente os campos que o seu grupo for usar — velocidade no
@@ -43,9 +56,13 @@ struct EstadoVeiculo {
     std::string modo_de_voo = "DESCONHECIDO";
     bool armado = false;
     bool em_voo = false;
+    double velocidade;
+    double taxa_de_subida;
     Atitude atitude{};
     Posicao posicao{};
     Bateria bateria{};
+    Home home{};
+
     Instante instante = std::chrono::steady_clock::now();
 
     /// Uma linha legível, usada pelo comando `status`.

@@ -3,6 +3,7 @@
 #include <mavsdk/mavsdk.hpp>
 #include <mavsdk/plugins/action/action.hpp>
 #include <mavsdk/plugins/telemetry/telemetry.hpp>
+#include <mavsdk/plugins/
 
 #include <algorithm>
 #include <cctype>
@@ -162,6 +163,61 @@ void Drone::alterar_modo_de_voo(const std::string& modo) {
         {"RTL", [&acoes] { return acoes.return_to_launch(); }},
         {"HOLD", [&acoes] { return acoes.hold(); }},
         {"LAND", [&acoes] { return acoes.land(); }},
+        {"GUIDED", [&acoes] { 
+            auto mavlink_passthrough = MavLinkPassthrough{system};
+            mavlink_message_t message;
+            float guided_mode = 4.0f;
+            mavlink_msg_command_long_pack(
+                mavlink_passthrough.get_our_sysid(),
+                mavlink_passthrough.get_our_compid(),
+                &message;
+                mavlink_passthrough.get_target_sysid(),
+                mavlink_passthrough.get_target_compid(),
+                176,
+                0,
+                1.0f,
+                guided_mode,
+                0, 0, 0, 0, 0);
+
+            return mavlink_passthrough.send_message(message);
+        }},
+        {"AUTO", [&acoes] { 
+            auto mavlink_passthrough = MavLinkPassthrough{system};
+            mavlink_message_t message;
+            float auto_mode = 3.0f;
+            mavlink_msg_command_long_pack(
+                mavlink_passthrough.get_our_sysid(),
+                mavlink_passthrough.get_our_compid(),
+                &message;
+                mavlink_passthrough.get_target_sysid(),
+                mavlink_passthrough.get_target_compid(),
+                176,
+                0,
+                1.0f,
+                auto_mode,
+                0, 0, 0, 0, 0);
+
+            return mavlink_passthrough.send_message(message);
+        }},
+        {"LOITER", [&acoes] { return acoes.hold(); }},
+        {"STABILIZE", [&acoes] { 
+            auto mavlink_passthrough = MavLinkPassthrough{system};
+            mavlink_message_t message;
+            float stabilize_mode = 0.0f;
+            mavlink_msg_command_long_pack(
+                mavlink_passthrough.get_our_sysid(),
+                mavlink_passthrough.get_our_compid(),
+                &message;
+                mavlink_passthrough.get_target_sysid(),
+                mavlink_passthrough.get_target_compid(),
+                176,
+                0,
+                1.0f,
+                stabilize_mode,
+                0, 0, 0, 0, 0);
+
+            return mavlink_passthrough.send_message(message);
+        }}
     };
 
     const std::string alvo = para_maiusculas(modo);
@@ -183,15 +239,67 @@ void Drone::alterar_modo_de_voo(const std::string& modo) {
 // TODO (aluno): implemente aqui os demais comandos, sempre delegando para o
 // plugin Action e convertendo o Result em exceção, como acima:
 //
-//     void Drone::armar() {
-//         const auto resultado = impl_->acoes->arm();
-//         if (resultado != mavsdk::Action::Result::Success) { ... }
-//     }
-//
-//     void Drone::decolar(double altura_m) {
-//         impl_->acoes->set_takeoff_altitude(static_cast<float>(altura_m));
-//         const auto resultado = impl_->acoes->takeoff();
-//         ...
-//     }
+void Drone::armar() {
+    const auto resultado = impl_->acoes->arm();
+    if (resultado != mavsdk::Action::Result::Success) { 
+        throw ErroDeVeiculo("não foi possível armar o drone: " + para_texto(resultado));
+    }
+}
+
+void Drone::desarmar() {
+    const auto resultado = impl_->acoes->disarm();
+    if (resultado != mavsdk::Action::Result::Success) {
+        throw ErroDeVeiculo("não foi possível desarmar o drone" + para_texto(resultado));
+    }
+}
+
+
+void Drone::pousar() {
+    const auto resultado = impl_->acoes->land();
+    if (resultado != mavsdk::Action::Result::Success) {
+        throw ErroDeVeiculo("falha no pouso: " + para_texto(resultado));
+    }
+}
+
+
+void Drone::retornar_para_casa() {
+    const auto resultado = impl->acoes->return_to_launch();
+    if (resultado != mavsdk:;Action::Result::Success) {
+        throw ErroDeVeiculo("falha ao retornar para casa: " + para_texto(resultdo));
+    }
+}
+
+
+void Drone::decolar(double altura_m) {
+    impl_->acoes->set_takeoff_altitude(static_cast<float>(altura_m));
+    const auto resultado = impl_->acoes->takeoff();
+    if (resultado != mavsdk::Action::Result::Success) {
+        throw ErroDeVeiculo("falha na decolagem: " + para_texto(resultado));
+    }
+}
+
+void Drone::ir_para(Posicao pos) {
+    float altitude = static_cast<float>(pos.altitude_absoluta_m);
+    const auto resultado = impl_->acoes->goto_location(pos.latitude, pos.longitude, altitude, 0.0);
+    if (resultado != mavsdk::Action::Result::Success) {
+        throw ErroDeVeiculo("falha ao tentar navegar a posicao escolhida: " + para_texto(resultado));
+    }
+}
+
+void Drone::gravar() {
+    const auto camera = mavsdk::Camera(system);
+    const auto resultado = camera.start_video();
+    if (resultado != mavsdk::Camera::Result::Success) {
+        throw ErroDeVeiculo("falha ao tentar gravar: " + para_texto(resultado));
+    }
+}
+
+void Drone::limpar() {
+    const auto resultado = impl_->acoes->reboot();
+    if (resultado != mavsdk::Action::Result::Success) {
+        throw ErroDeVeiculo("falha ao tentar limpar componentes: " + para_texto(resultado));
+    }
+}
+
 
 }  // namespace gcs

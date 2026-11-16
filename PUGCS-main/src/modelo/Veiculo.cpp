@@ -91,4 +91,29 @@ void VeiculoSimulado::alterar_modo_de_voo(const std::string& modo) {
     atualizar([&maiusculo](EstadoVeiculo& estado) { estado.modo_de_voo = maiusculo; });
 }
 
+
+void VeiculoSimulado::armar() {
+    atualizar([](EstadoVeiculo& estado) {estado.armado = true; });
+}
+
+void VeiculoSimulado::desarmar() {
+    atualizar([](EstadoVeiculo& estado) {estado.armado = false; });
+}
+
+void VeiculoSimulado::decolar(double altura_m) {
+    atualizar([=](EstadoVeiculo& estado) {estado.posicao.altitude_relativa_m = altura_m; });
+}
+
+void VeiculoSimulado::pousar() {
+    atualizar([](EstadoVeiculo& estado) {estado.posicao.altitude_relativa_m = 0.0; });
+}
+
+void VeiculoSimulado::retornar_para_casa() {
+    atualizar([](EstadoVeiculo& estado) {estado.posicao = estado.home.coordenadas; });
+}
+
+// void VeiculoSimulado::gravar() {
+//     atualizar([](EstadoVeiculo& estado) {estado.})
+// }
+
 }  // namespace gcs
