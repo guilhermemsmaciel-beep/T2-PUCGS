@@ -166,6 +166,33 @@ public:
 
 
 
+class Gravar : public Comando {
+public:
+    std::string nome() const override { return "gravar"; }
+    std::string uso() const override { return "gravar <arquivo.csv>"; }
+    std::string ajuda() const override { return "salva o histórico de telemetria em CSV"; }
+
+    void executar(EstacaoDeControle& estacao,
+                  const std::vector<std::string>& argumentos) override {
+        if (argumentos.size() != 1) {
+            throw ErroDeComando("uso: " + uso());
+        }
+        const std::size_t amostras = estacao.historico().exportar_csv(argumentos.front());
+        std::cout << amostras << " amostras gravadas em " << argumentos.front() << '\n';
+    }
+};
+
+class Limpar : public Comando {
+public:
+    std::string nome() const override { return "limpar"; }
+    std::string ajuda() const override { return "apaga o histórico (os gráficos recomeçam)"; }
+
+    void executar(EstacaoDeControle& estacao, const std::vector<std::string>&) override {
+        estacao.limpar_historico();
+        std::cout << "histórico apagado\n";
+    }
+};
+
 }  // namespace
 
 RegistroDeComandos comandos_padrao() {
@@ -180,6 +207,8 @@ RegistroDeComandos comandos_padrao() {
     registro.registrar(std::make_unique<Armar>());
     registro.registrar(std::make_unique<Pousar>());
     registro.registrar(std::make_unique<RTL>());
+    registro.registrar(std::make_unique<Gravar>());
+    registro.registrar(std::make_unique<Limpar>());
     
     return registro;
 }

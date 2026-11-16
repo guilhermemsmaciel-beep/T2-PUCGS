@@ -6,3 +6,4 @@ ardupilot/
 .vscode/
 build/
 .DS_Store
+*.csv

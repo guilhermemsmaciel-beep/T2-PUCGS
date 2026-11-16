@@ -27,6 +27,8 @@ public:
 
     Veiculo& veiculo() { return *veiculo_; }
     const Historico& historico() const { return historico_; }
+    /// Descarta as amostras guardadas (os gráficos recomeçam do zero).
+    void limpar_historico() { historico_.limpar(); }
     RegistroDeComandos& comandos() { return comandos_; }
 
     /// Mostra um painel em tela cheia, atualizando ao vivo, até o usuário
