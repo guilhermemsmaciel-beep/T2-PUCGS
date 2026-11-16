@@ -44,8 +44,6 @@ public:
     void decolar(double altura_m) override ;
     void pousar() override ;
     void retornar_para_casa() override;
-    void gravar() override;
-    void limpar() override;
     void ir_para(Posicao pos);
 
 private:

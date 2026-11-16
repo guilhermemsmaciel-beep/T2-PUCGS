@@ -165,15 +165,6 @@ public:
 };
 
 
-class Gravar : public Comando {
-public:
-    std::string nome() const override { return "gravar"; }
-    std::string ajuda() const override { return "grava"; }
-
-    void executar(EstacaoDeControle& estacao, const std::vector<std::string>&) {
-        estacao.veiculo().gravar();
-    }
-};
 
 }  // namespace
 
@@ -189,7 +180,6 @@ RegistroDeComandos comandos_padrao() {
     registro.registrar(std::make_unique<Armar>());
     registro.registrar(std::make_unique<Pousar>());
     registro.registrar(std::make_unique<RTL>());
-    registro.registrar(std::make_unique<Gravar>());
     
     return registro;
 }

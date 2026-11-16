@@ -3,13 +3,14 @@
 #include <mavsdk/mavsdk.hpp>
 #include <mavsdk/plugins/action/action.hpp>
 #include <mavsdk/plugins/telemetry/telemetry.hpp>
-#include <mavsdk/plugins/
+#include <mavsdk/plugins/mavlink_direct/mavlink_direct.hpp>
 
 #include <algorithm>
 #include <cctype>
 #include <iostream>
 #include <map>
 #include <sstream>
+#include <string>
 #include <utility>
 
 namespace gcs {
@@ -29,6 +30,35 @@ std::string para_texto(const T& valor) {
     std::ostringstream fluxo;
     fluxo << valor;
     return fluxo.str();
+}
+
+/// Troca o modo do ArduPilot pelo número dele, enviando um COMMAND_LONG com
+/// MAV_CMD_DO_SET_MODE (176). Usado para os modos que o plugin Action não
+/// cobre (GUIDED, AUTO...).
+void enviar_modo_ardupilot(mavsdk::MavlinkDirect& mavlink, const mavsdk::System& sistema,
+                           int numero, const std::string& nome) {
+    const mavsdk::Mavsdk::Configuration gcs{mavsdk::ComponentType::GroundStation};
+    const int alvo_sistema = sistema.get_system_id();
+    const int alvo_componente = 1;  // o autopiloto
+
+    mavsdk::MavlinkDirect::MavlinkMessage mensagem{};
+    mensagem.message_name = "COMMAND_LONG";
+    mensagem.system_id = gcs.get_system_id();
+    mensagem.component_id = gcs.get_component_id();
+    mensagem.target_system_id = alvo_sistema;
+    mensagem.target_component_id = alvo_componente;
+    mensagem.fields_json =
+        "{\"target_system\": " + std::to_string(alvo_sistema) +
+        ", \"target_component\": " + std::to_string(alvo_componente) +
+        ", \"command\": 176, \"confirmation\": 0"
+        ", \"param1\": 1.0, \"param2\": " + std::to_string(numero) + ".0"
+        ", \"param3\": 0.0, \"param4\": 0.0, \"param5\": 0.0"
+        ", \"param6\": 0.0, \"param7\": 0.0}";
+
+    const auto resultado = mavlink.send_message(mensagem);
+    if (resultado != mavsdk::MavlinkDirect::Result::Success) {
+        throw ErroDeVeiculo("o autopiloto recusou o modo " + nome + ": " + para_texto(resultado));
+    }
 }
 
 }  // namespace
@@ -60,6 +90,7 @@ public:
     std::shared_ptr<mavsdk::System> sistema;
     std::unique_ptr<mavsdk::Telemetry> telemetria;
     std::unique_ptr<mavsdk::Action> acoes;
+    std::unique_ptr<mavsdk::MavlinkDirect> mavlink;
 };
 
 Drone::Drone(std::string nome, std::string endereco)
@@ -88,6 +119,7 @@ void Drone::conectar() {
     impl_->sistema = sistema.value();
     impl_->telemetria = std::make_unique<mavsdk::Telemetry>(impl_->sistema);
     impl_->acoes = std::make_unique<mavsdk::Action>(impl_->sistema);
+    impl_->mavlink = std::make_unique<mavsdk::MavlinkDirect>(impl_->sistema);
     std::cout << "[" << nome() << "] conectado." << std::endl;
 }
 
@@ -152,75 +184,24 @@ void Drone::alterar_modo_de_voo(const std::string& modo) {
         throw ErroDeVeiculo("alterar_modo_de_voo() antes de conectar()");
     }
     mavsdk::Action& acoes = *impl_->acoes;
+    const std::string alvo = para_maiusculas(modo);
 
-    // O MAVSDK não expõe "troque para o modo X" de forma genérica: ele oferece
-    // ações de alto nível. Mapeamos três delas como amostra.
-    //
-    // TODO (aluno): complete o mapa (GUIDED, AUTO, LOITER, STABILIZE...). Para
-    // os modos sem ação equivalente, use o plugin MavlinkPassthrough e envie
-    // MAV_CMD_DO_SET_MODE com o número do modo do ArduPilot.
+    // Modos do ArduCopter sem ação equivalente no MAVSDK: vão pelo número.
+    static const std::map<std::string, int> modos_ardupilot{
+        {"STABILIZE", 0}, {"AUTO", 3}, {"GUIDED", 4}, {"LOITER", 5}};
+    const auto modo_ardupilot = modos_ardupilot.find(alvo);
+    if (modo_ardupilot != modos_ardupilot.end()) {
+        enviar_modo_ardupilot(*impl_->mavlink, *impl_->sistema, modo_ardupilot->second, alvo);
+        return;
+    }
+
+    // Modos com ação equivalente no plugin Action.
     const std::map<std::string, std::function<mavsdk::Action::Result()>> acoes_por_modo{
         {"RTL", [&acoes] { return acoes.return_to_launch(); }},
         {"HOLD", [&acoes] { return acoes.hold(); }},
         {"LAND", [&acoes] { return acoes.land(); }},
-        {"GUIDED", [&acoes] { 
-            auto mavlink_passthrough = MavLinkPassthrough{system};
-            mavlink_message_t message;
-            float guided_mode = 4.0f;
-            mavlink_msg_command_long_pack(
-                mavlink_passthrough.get_our_sysid(),
-                mavlink_passthrough.get_our_compid(),
-                &message;
-                mavlink_passthrough.get_target_sysid(),
-                mavlink_passthrough.get_target_compid(),
-                176,
-                0,
-                1.0f,
-                guided_mode,
-                0, 0, 0, 0, 0);
-
-            return mavlink_passthrough.send_message(message);
-        }},
-        {"AUTO", [&acoes] { 
-            auto mavlink_passthrough = MavLinkPassthrough{system};
-            mavlink_message_t message;
-            float auto_mode = 3.0f;
-            mavlink_msg_command_long_pack(
-                mavlink_passthrough.get_our_sysid(),
-                mavlink_passthrough.get_our_compid(),
-                &message;
-                mavlink_passthrough.get_target_sysid(),
-                mavlink_passthrough.get_target_compid(),
-                176,
-                0,
-                1.0f,
-                auto_mode,
-                0, 0, 0, 0, 0);
-
-            return mavlink_passthrough.send_message(message);
-        }},
-        {"LOITER", [&acoes] { return acoes.hold(); }},
-        {"STABILIZE", [&acoes] { 
-            auto mavlink_passthrough = MavLinkPassthrough{system};
-            mavlink_message_t message;
-            float stabilize_mode = 0.0f;
-            mavlink_msg_command_long_pack(
-                mavlink_passthrough.get_our_sysid(),
-                mavlink_passthrough.get_our_compid(),
-                &message;
-                mavlink_passthrough.get_target_sysid(),
-                mavlink_passthrough.get_target_compid(),
-                176,
-                0,
-                1.0f,
-                stabilize_mode,
-                0, 0, 0, 0, 0);
-
-            return mavlink_passthrough.send_message(message);
-        }}
     };
 
-    const std::string alvo = para_maiusculas(modo);
     const auto encontrado = acoes_por_modo.find(alvo);
     if (encontrado == acoes_por_modo.end()) {
         std::string disponiveis;
@@ -236,12 +217,11 @@ void Drone::alterar_modo_de_voo(const std::string& modo) {
     }
 }
 
-// TODO (aluno): implemente aqui os demais comandos, sempre delegando para o
-// plugin Action e convertendo o Result em exceção, como acima:
-//
+// Comandos de voo: cada um delega para o plugin Action e converte o Result
+// em exceção.
 void Drone::armar() {
     const auto resultado = impl_->acoes->arm();
-    if (resultado != mavsdk::Action::Result::Success) { 
+    if (resultado != mavsdk::Action::Result::Success) {
         throw ErroDeVeiculo("não foi possível armar o drone: " + para_texto(resultado));
     }
 }
@@ -249,10 +229,9 @@ void Drone::armar() {
 void Drone::desarmar() {
     const auto resultado = impl_->acoes->disarm();
     if (resultado != mavsdk::Action::Result::Success) {
-        throw ErroDeVeiculo("não foi possível desarmar o drone" + para_texto(resultado));
+        throw ErroDeVeiculo("não foi possível desarmar o drone: " + para_texto(resultado));
     }
 }
-
 
 void Drone::pousar() {
     const auto resultado = impl_->acoes->land();
@@ -261,14 +240,12 @@ void Drone::pousar() {
     }
 }
 
-
 void Drone::retornar_para_casa() {
-    const auto resultado = impl->acoes->return_to_launch();
-    if (resultado != mavsdk:;Action::Result::Success) {
-        throw ErroDeVeiculo("falha ao retornar para casa: " + para_texto(resultdo));
+    const auto resultado = impl_->acoes->return_to_launch();
+    if (resultado != mavsdk::Action::Result::Success) {
+        throw ErroDeVeiculo("falha ao retornar para casa: " + para_texto(resultado));
     }
 }
-
 
 void Drone::decolar(double altura_m) {
     impl_->acoes->set_takeoff_altitude(static_cast<float>(altura_m));
@@ -285,21 +262,5 @@ void Drone::ir_para(Posicao pos) {
         throw ErroDeVeiculo("falha ao tentar navegar a posicao escolhida: " + para_texto(resultado));
     }
 }
-
-void Drone::gravar() {
-    const auto camera = mavsdk::Camera(system);
-    const auto resultado = camera.start_video();
-    if (resultado != mavsdk::Camera::Result::Success) {
-        throw ErroDeVeiculo("falha ao tentar gravar: " + para_texto(resultado));
-    }
-}
-
-void Drone::limpar() {
-    const auto resultado = impl_->acoes->reboot();
-    if (resultado != mavsdk::Action::Result::Success) {
-        throw ErroDeVeiculo("falha ao tentar limpar componentes: " + para_texto(resultado));
-    }
-}
-
 
 }  // namespace gcs
