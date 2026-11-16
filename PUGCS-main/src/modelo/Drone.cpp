@@ -13,6 +13,7 @@
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace gcs {
 namespace {
@@ -129,6 +130,26 @@ void Drone::iniciar_telemetria() {
         throw ErroDeVeiculo("iniciar_telemetria() antes de conectar()");
     }
     mavsdk::Telemetry& telemetria = *impl_->telemetria;
+
+    // O ArduPilot só envia a telemetria que a GCS pede (normalmente quem pede é
+    // o MAVProxy). Pedimos aqui a taxa de cada dado, em Hz. Se o autopiloto
+    // recusar alguma, avisamos e seguimos sem ela.
+    const std::vector<std::pair<std::string, mavsdk::Telemetry::Result>> taxas{
+        {"atitude", telemetria.set_rate_attitude_euler(10.0)},
+        {"posição", telemetria.set_rate_position(5.0)},
+        {"velocidade", telemetria.set_rate_velocity_ned(5.0)},
+        {"bateria", telemetria.set_rate_battery(1.0)},
+        {"gps", telemetria.set_rate_gps_info(1.0)},
+        {"home", telemetria.set_rate_home(1.0)},
+        {"em voo", telemetria.set_rate_in_air(1.0)},
+        {"rádio", telemetria.set_rate_rc_status(1.0)},
+    };
+    for (const auto& [dado, resultado] : taxas) {
+        if (resultado != mavsdk::Telemetry::Result::Success) {
+            std::cerr << "[" << nome() << "] aviso: taxa de " << dado
+                      << " recusada: " << para_texto(resultado) << std::endl;
+        }
+    }
 
     // Cada assinatura é um callback chamado pela thread do MAVSDK. Tudo que
     // fazemos é traduzir o dado da biblioteca para o NOSSO modelo — assim o
