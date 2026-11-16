@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -171,12 +172,33 @@ void Drone::iniciar_telemetria() {
         atualizar([em_voo](EstadoVeiculo& estado) { estado.em_voo = em_voo; });
     });
 
-    // TODO (aluno): assine o que mais a sua GCS precisar. A lista completa está
-    // em <mavsdk/plugins/telemetry/telemetry.hpp> — por exemplo:
-    //   subscribe_velocity_ned, subscribe_gps_info, subscribe_home,
-    //   subscribe_heading, subscribe_rc_status, subscribe_health.
-    // Se a taxa de atualização vier baixa, dê uma olhada nos métodos
-    // set_rate_* do plugin Telemetry (o ArduPilot não implementa todos).
+    telemetria.subscribe_velocity_ned([this](mavsdk::Telemetry::VelocityNed velocidade) {
+        atualizar([&velocidade](EstadoVeiculo& estado) {
+            estado.velocidade.norte_m_s = velocidade.north_m_s;
+            estado.velocidade.leste_m_s = velocidade.east_m_s;
+            estado.velocidade.baixo_m_s = velocidade.down_m_s;
+        });
+    });
+
+    telemetria.subscribe_gps_info([this](mavsdk::Telemetry::GpsInfo gps) {
+        atualizar([&gps](EstadoVeiculo& estado) { estado.gps.satelites = gps.num_satellites; });
+    });
+
+    telemetria.subscribe_home([this](mavsdk::Telemetry::HomePosition home) {
+        atualizar([&home](EstadoVeiculo& estado) {
+            estado.home.latitude = home.latitude_deg;
+            estado.home.longitude = home.longitude_deg;
+            estado.home.altitude_absoluta_m = home.absolute_altitude_m;
+            estado.home.altitude_relativa_m = home.relative_altitude_m;
+        });
+    });
+
+    telemetria.subscribe_rc_status([this](mavsdk::Telemetry::RcStatus radio) {
+        atualizar([&radio](EstadoVeiculo& estado) {
+            estado.radio.disponivel = radio.is_available;
+            estado.radio.sinal_percentual = std::isnan(radio.signal_strength_percent) ? 0.0 : radio.signal_strength_percent;
+        });
+    });
 }
 
 void Drone::alterar_modo_de_voo(const std::string& modo) {

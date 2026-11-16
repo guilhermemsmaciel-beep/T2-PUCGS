@@ -156,7 +156,7 @@ public:
 
 class RTL : public Comando {
 public:
-    std::string nome() const override { return "RTL"; }
+    std::string nome() const override { return "rtl"; }
     std::string ajuda() const override { return "retorna veiculo ao ponto de decolagem"; }
 
     void executar(EstacaoDeControle& estacao, const std::vector<std::string>&) override {

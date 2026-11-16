@@ -109,7 +109,7 @@ void VeiculoSimulado::pousar() {
 }
 
 void VeiculoSimulado::retornar_para_casa() {
-    atualizar([](EstadoVeiculo& estado) {estado.posicao = estado.home.coordenadas; });
+    atualizar([](EstadoVeiculo& estado) {estado.posicao = estado.home; });
 }
 
 // void VeiculoSimulado::gravar() {
