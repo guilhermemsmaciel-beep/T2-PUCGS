@@ -1,6 +1,9 @@
 #include "cli/ComandosPadrao.hpp"
 
+#include <cmath>
 #include <iostream>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 #include <memory>
 
@@ -91,33 +94,55 @@ public:
     }
 };
 
-/// Exemplo de comando deixado como exercício: o console trata NaoImplementado
-/// de forma amigável, então dá para registrar o esqueleto antes de implementar.
+/// Arma o veículo e decola até a altura pedida.
 class Decolar : public Comando {
 public:
+    /// Faixa aceita para a altura de decolagem, em metros.
+    static constexpr double ALTURA_MINIMA_M = 1.0;
+    static constexpr double ALTURA_MAXIMA_M = 100.0;
+
     std::string nome() const override { return "decolar"; }
     std::string uso() const override { return "decolar <altura_m>"; }
     std::string ajuda() const override {
-        return "[exercício] arma o drone e decola até a altura pedida";
+        return "arma o drone e decola até a altura pedida (1 a 100 m)";
     }
 
-    void executar(EstacaoDeControle& estacao, const std::vector<std::string>& argumentos) override {
-        // TODO (aluno): validar a altura recebida, chamar veiculo().armar() e
-        // veiculo().decolar(altura) — métodos que você vai declarar em Veiculo e
-        // implementar em Drone — e avisar o usuário do resultado.
+    void executar(EstacaoDeControle& estacao,
+                  const std::vector<std::string>& argumentos) override {
+        if (argumentos.size() != 1) {
+            throw ErroDeComando("uso: " + uso());
+        }
+        const double altura_m = ler_altura(argumentos.front());
 
-        // auto altura_m = [] (const std::vector<std::string>& argumentos) {
-        //     int altura = stoi(argumentos[0]);
-        //     return static_cast<double>(altura);
-        // };
-
-        int altura = stoi(argumentos[0]);
-
-    
         estacao.veiculo().armar();
-        estacao.veiculo().decolar(static_cast<double>(altura));
+        estacao.veiculo().decolar(altura_m);
+        std::cout << "decolando até " << altura_m << " m\n";
+    }
 
-        //throw NaoImplementado("decolagem");
+private:
+    /// "1 e 100 m" — usado na mensagem de erro de faixa.
+    static std::string faixa() {
+        std::ostringstream texto;
+        texto << ALTURA_MINIMA_M << " e " << ALTURA_MAXIMA_M << " m";
+        return texto.str();
+    }
+
+    /// Converte o texto digitado em altura, validando formato e faixa.
+    static double ler_altura(const std::string& texto) {
+        double altura_m = 0.0;
+        std::size_t lidos = 0;
+        try {
+            altura_m = std::stod(texto, &lidos);
+        } catch (const std::logic_error&) {  // invalid_argument e out_of_range
+            throw ErroDeComando("altura inválida: '" + texto + "' não é um número");
+        }
+        if (lidos != texto.size() || !std::isfinite(altura_m)) {
+            throw ErroDeComando("altura inválida: '" + texto + "' não é um número");
+        }
+        if (altura_m < ALTURA_MINIMA_M || altura_m > ALTURA_MAXIMA_M) {
+            throw ErroDeComando("a altura deve ficar entre " + faixa());
+        }
+        return altura_m;
     }
 };
 
