@@ -26,6 +26,15 @@ struct Posicao {
     double longitude = 0.0;
     double altitude_absoluta_m = 0.0;  // em relação ao nível do mar (AMSL)
     double altitude_relativa_m = 0.0;  // em relação ao ponto de decolagem
+
+    /// Esta posição deslocada alguns metros para norte e leste (negativos
+    /// valem para sul e oeste), na mesma altitude. Boa aproximação para
+    /// distâncias curtas, de até alguns quilômetros.
+    Posicao deslocada(double norte_m, double leste_m) const;
+
+    /// Esta posição numa nova altura em relação ao ponto de decolagem,
+    /// ajustando as duas altitudes.
+    Posicao na_altura(double altura_relativa_m) const;
 };
 
 /// Estado da bateria principal.

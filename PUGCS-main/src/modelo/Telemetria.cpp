@@ -23,6 +23,22 @@ std::string EstadoVeiculo::resumo() const {
     return fluxo.str();
 }
 
+Posicao Posicao::deslocada(double norte_m, double leste_m) const {
+    constexpr double METROS_POR_GRAU = 111320.0;
+    constexpr double PI = 3.14159265358979323846;
+    Posicao destino = *this;
+    destino.latitude += norte_m / METROS_POR_GRAU;
+    destino.longitude += leste_m / (METROS_POR_GRAU * std::cos(latitude * PI / 180.0));
+    return destino;
+}
+
+Posicao Posicao::na_altura(double altura_relativa_m) const {
+    Posicao destino = *this;
+    destino.altitude_absoluta_m += altura_relativa_m - altitude_relativa_m;
+    destino.altitude_relativa_m = altura_relativa_m;
+    return destino;
+}
+
 double Velocidade::no_solo() const {
     return std::hypot(norte_m_s, leste_m_s);
 }

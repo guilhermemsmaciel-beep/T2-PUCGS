@@ -95,12 +95,36 @@ public:
 };
 
 /// Arma o veículo e decola até a altura pedida.
+/// Converte o texto digitado em número, validando formato e faixa.
+/// Ex.: ler_numero("15", "altura", 1, 100) → 15; "abc" ou "500" → ErroDeComando.
+double ler_numero(const std::string& texto, const std::string& nome, double minimo,
+                  double maximo) {
+    double valor = 0.0;
+    std::size_t lidos = 0;
+    try {
+        valor = std::stod(texto, &lidos);
+    } catch (const std::logic_error&) {  // invalid_argument e out_of_range
+        lidos = 0;
+    }
+    if (lidos == 0 || lidos != texto.size() || !std::isfinite(valor)) {
+        throw ErroDeComando("valor inválido para " + nome + ": '" + texto + "' não é um número");
+    }
+    if (valor < minimo || valor > maximo) {
+        std::ostringstream faixa;
+        faixa << nome << " deve ficar entre " << minimo << " e " << maximo << " m";
+        throw ErroDeComando(faixa.str());
+    }
+    return valor;
+}
+
+// Faixas aceitas pelos comandos de voo, em metros.
+constexpr double ALTURA_MINIMA_M = 1.0;
+constexpr double ALTURA_MAXIMA_M = 100.0;
+constexpr double DESLOCAMENTO_MAXIMO_M = 500.0;
+
+/// Arma o veículo e decola até a altura pedida.
 class Decolar : public Comando {
 public:
-    /// Faixa aceita para a altura de decolagem, em metros.
-    static constexpr double ALTURA_MINIMA_M = 1.0;
-    static constexpr double ALTURA_MAXIMA_M = 100.0;
-
     std::string nome() const override { return "decolar"; }
     std::string uso() const override { return "decolar <altura_m>"; }
     std::string ajuda() const override {
@@ -112,36 +136,60 @@ public:
         if (argumentos.size() != 1) {
             throw ErroDeComando("uso: " + uso());
         }
-        const double altura_m = ler_altura(argumentos.front());
+        const double altura_m =
+            ler_numero(argumentos.front(), "altura", ALTURA_MINIMA_M, ALTURA_MAXIMA_M);
 
         estacao.veiculo().decolar(altura_m);
         std::cout << "decolando até " << altura_m << " m\n";
     }
+};
 
-private:
-    /// "1 e 100 m" — usado na mensagem de erro de faixa.
-    static std::string faixa() {
-        std::ostringstream texto;
-        texto << ALTURA_MINIMA_M << " e " << ALTURA_MAXIMA_M << " m";
-        return texto.str();
+/// Sobe ou desce até uma nova altura, sem sair do lugar.
+class Altitude : public Comando {
+public:
+    std::string nome() const override { return "altitude"; }
+    std::string uso() const override { return "altitude <altura_m>"; }
+    std::string ajuda() const override { return "sobe ou desce até a altura pedida, no lugar"; }
+
+    void executar(EstacaoDeControle& estacao,
+                  const std::vector<std::string>& argumentos) override {
+        if (argumentos.size() != 1) {
+            throw ErroDeComando("uso: " + uso());
+        }
+        const double altura_m =
+            ler_numero(argumentos.front(), "altura", ALTURA_MINIMA_M, ALTURA_MAXIMA_M);
+
+        const Posicao agora = estacao.veiculo().estado().posicao;
+        estacao.veiculo().ir_para(agora.na_altura(altura_m));
+        std::cout << "indo para " << altura_m << " m de altura\n";
+    }
+};
+
+/// Voa até um ponto a alguns metros da posição atual.
+class Ir : public Comando {
+public:
+    std::string nome() const override { return "ir"; }
+    std::string uso() const override { return "ir <norte_m> <leste_m> <altura_m>"; }
+    std::string ajuda() const override {
+        return "voa até um ponto relativo (negativo = sul/oeste)";
     }
 
-    /// Converte o texto digitado em altura, validando formato e faixa.
-    static double ler_altura(const std::string& texto) {
-        double altura_m = 0.0;
-        std::size_t lidos = 0;
-        try {
-            altura_m = std::stod(texto, &lidos);
-        } catch (const std::logic_error&) {  // invalid_argument e out_of_range
-            throw ErroDeComando("altura inválida: '" + texto + "' não é um número");
+    void executar(EstacaoDeControle& estacao,
+                  const std::vector<std::string>& argumentos) override {
+        if (argumentos.size() != 3) {
+            throw ErroDeComando("uso: " + uso() + "  (ex.: ir 50 0 20)");
         }
-        if (lidos != texto.size() || !std::isfinite(altura_m)) {
-            throw ErroDeComando("altura inválida: '" + texto + "' não é um número");
-        }
-        if (altura_m < ALTURA_MINIMA_M || altura_m > ALTURA_MAXIMA_M) {
-            throw ErroDeComando("a altura deve ficar entre " + faixa());
-        }
-        return altura_m;
+        const double norte_m = ler_numero(argumentos.at(0), "norte", -DESLOCAMENTO_MAXIMO_M,
+                                          DESLOCAMENTO_MAXIMO_M);
+        const double leste_m = ler_numero(argumentos.at(1), "leste", -DESLOCAMENTO_MAXIMO_M,
+                                          DESLOCAMENTO_MAXIMO_M);
+        const double altura_m =
+            ler_numero(argumentos.at(2), "altura", ALTURA_MINIMA_M, ALTURA_MAXIMA_M);
+
+        const Posicao agora = estacao.veiculo().estado().posicao;
+        estacao.veiculo().ir_para(agora.deslocada(norte_m, leste_m).na_altura(altura_m));
+        std::cout << "indo " << norte_m << " m ao norte e " << leste_m << " m a leste, a "
+                  << altura_m << " m de altura\n";
     }
 };
 
@@ -237,6 +285,8 @@ RegistroDeComandos comandos_padrao() {
     registro.registrar(std::make_unique<Plotar>());
     registro.registrar(std::make_unique<Horizonte>());
     registro.registrar(std::make_unique<Decolar>());
+    registro.registrar(std::make_unique<Altitude>());
+    registro.registrar(std::make_unique<Ir>());
     registro.registrar(std::make_unique<Sair>());
     registro.registrar(std::make_unique<Armar>());
     registro.registrar(std::make_unique<Desarmar>());
