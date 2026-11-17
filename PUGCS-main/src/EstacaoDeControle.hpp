@@ -14,9 +14,7 @@ namespace gcs {
 /// Dona de tudo e intermediária entre as camadas.
 ///
 /// Note que ela guarda um `unique_ptr<Veiculo>`, não um `Drone`: a estação
-/// funciona igual com o drone de verdade ou com o simulado. Esse é o ponto
-/// central do trabalho — programar contra a abstração, não contra a
-/// implementação.
+/// funciona igual com o drone de verdade ou com o simulado. 
 class EstacaoDeControle {
 public:
     EstacaoDeControle(std::unique_ptr<Veiculo> veiculo, RegistroDeComandos comandos);
@@ -27,6 +25,8 @@ public:
 
     Veiculo& veiculo() { return *veiculo_; }
     const Historico& historico() const { return historico_; }
+    /// Descarta as amostras guardadas (os gráficos recomeçam do zero).
+    void limpar_historico() { historico_.limpar(); }
     RegistroDeComandos& comandos() { return comandos_; }
 
     /// Mostra um painel em tela cheia, atualizando ao vivo, até o usuário
@@ -37,7 +37,7 @@ public:
     bool rodando() const { return rodando_; }
 
 private:
-    /// Dá um tempo para o primeiro pacote de telemetria chegar, para que o
+    /// da um tempo para o primeiro pacote de telemetria chegar, para que o
     /// primeiro `status` já mostre dados de verdade.
     void esperar_primeira_telemetria(double tempo_limite_s = 3.0);
 

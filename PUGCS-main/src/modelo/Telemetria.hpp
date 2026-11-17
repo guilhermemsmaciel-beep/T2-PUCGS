@@ -34,34 +34,42 @@ struct Bateria {
     double percentual = 0.0;  // 0 a 100
 };
 
-struct Satelite {
+/// Velocidade em relação ao solo, no referencial NED (norte, leste, baixo), em m/s.
+struct Velocidade {
+    double norte_m_s = 0.0;
+    double leste_m_s = 0.0;
+    double baixo_m_s = 0.0;  // positivo descendo
 
+    /// Velocidade horizontal (no solo), em m/s.
+    double no_solo() const;
+    /// Taxa de subida, em m/s: positiva subindo, negativa descendo.
+    double taxa_de_subida() const { return 0.0 - baixo_m_s; }
 };
 
+/// Situação do receptor GPS.
+struct Gps {
+    int satelites = 0;
+};
+
+/// Enlace de rádio (controle remoto).
 struct Radio {
-    double frequencia = 0.0;
-    
-};
-
-struct Home {
-    Posicao coordenadas = {0.0, 0.0, 0.0, 0.0};
+    bool disponivel = false;
+    double sinal_percentual = 0.0;  // 0 a 100
 };
 
 /// Fotografia completa do veículo em um instante.
 ///
-/// TODO (aluno): acrescente os campos que o seu grupo for usar — velocidade no
-/// solo, taxa de subida, número de satélites, qualidade do enlace de rádio,
-/// distância até o ponto de decolagem, estado dos sensores...
 struct EstadoVeiculo {
     std::string modo_de_voo = "DESCONHECIDO";
     bool armado = false;
     bool em_voo = false;
-    double velocidade;
-    double taxa_de_subida;
     Atitude atitude{};
     Posicao posicao{};
+    Velocidade velocidade{};
     Bateria bateria{};
-    Home home{};
+    Gps gps{};
+    Radio radio{};
+    Posicao home{};  // ponto de decolagem
 
     Instante instante = std::chrono::steady_clock::now();
 

@@ -76,11 +76,10 @@ public:
     //
     virtual void armar() = 0;
     virtual void desarmar() = 0;
+    /// Prepara o veículo (modo, armação) e decola até a altura pedida.
     virtual void decolar(double altura_m) = 0;
     virtual void pousar() = 0;
     virtual void retornar_para_casa() = 0;
-    virtual void gravar() = 0;
-    virtual void limpar() = 0;
 
 protected:
     /// Modifica o estado e notifica os observadores.
@@ -106,6 +105,10 @@ std::ostream& operator<<(std::ostream& fluxo, const Veiculo& veiculo);
 /// precisa saber) se está falando com o ArduPilot ou com esta classe. Use
 /// `./mini_gcs --simulado` para desenvolver a interface no avião, no ônibus,
 /// em qualquer lugar.
+///
+/// A simulação é simples, mas obedece aos comandos como o drone de verdade:
+/// decola até a altura pedida, paira, pousa e desarma, volta para casa e
+/// recusa o que o ArduPilot também recusaria (desarmar em voo, decolar em voo).
 class VeiculoSimulado : public Veiculo {
 public:
     explicit VeiculoSimulado(std::string nome = "simulado");
@@ -119,13 +122,25 @@ public:
     void decolar(double altura_m) override ;
     void pousar() override ;
     void retornar_para_casa() override;
-    void gravar() override;
 
 private:
+    /// O que o drone simulado está fazendo no momento.
+    enum class Manobra { Parado, Subindo, Pairando, Pousando, Retornando };
+
     void laco_de_telemetria();
+    /// Avança a simulação em dt segundos (chamada com mutex_simulacao_ travado).
+    void passo(double t, double dt);
+    /// Troca de modo sem travar mutex_simulacao_ (quem chama já travou).
+    void aplicar_modo(const std::string& modo);
 
     std::atomic<bool> parar_{false};
     std::thread thread_;
+
+    // Intenção do piloto. Protegidos por mutex_simulacao_, porque são escritos
+    // pela thread do console e lidos pela thread da simulação.
+    std::mutex mutex_simulacao_;
+    Manobra manobra_ = Manobra::Parado;
+    double altitude_alvo_m_ = 0.0;
 };
 
 }  // namespace gcs

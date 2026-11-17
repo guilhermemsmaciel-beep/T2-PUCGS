@@ -8,6 +8,7 @@
 #include <deque>
 #include <functional>
 #include <mutex>
+#include <string>
 #include <vector>
 
 #include "modelo/Telemetria.hpp"
@@ -44,8 +45,10 @@ public:
     Serie serie(const Extrator& extrator) const;
     void limpar();
 
-    // TODO (aluno): exportar o histórico para CSV/JSON e analisar o voo depois
-    // (`void exportar_csv(const std::string& caminho) const;`).
+    /// Grava todas as amostras em um arquivo CSV (uma linha por estado) para
+    /// analisar o voo depois. Devolve quantas amostras foram gravadas.
+    /// Lança std::runtime_error se não conseguir escrever o arquivo.
+    std::size_t exportar_csv(const std::string& caminho) const;
 
 private:
     mutable std::mutex mutex_;
