@@ -374,11 +374,23 @@ void Drone::decolar(double altura_m) {
     }
 }
 
-void Drone::ir_para(Posicao pos) {
-    float altitude = static_cast<float>(pos.altitude_absoluta_m);
-    const auto resultado = impl_->acoes->goto_location(pos.latitude, pos.longitude, altitude, 0.0);
+void Drone::ir_para(const Posicao& destino) {
+    if (!impl_->acoes) {
+        throw ErroDeVeiculo("ir_para() antes de conectar()");
+    }
+    if (!estado().em_voo) {
+        throw ErroDeVeiculo("o drone precisa estar em voo para ir a uma posição");
+    }
+    // No ArduCopter, ir a um ponto por comando também exige o modo GUIDED.
+    if (modo_de_voo() != "GUIDED") {
+        alterar_modo_de_voo("GUIDED");
+        esperar_modo("GUIDED", 3.0);
+    }
+    const auto resultado = impl_->acoes->goto_location(
+        destino.latitude, destino.longitude, static_cast<float>(destino.altitude_absoluta_m),
+        0.0f);
     if (resultado != mavsdk::Action::Result::Success) {
-        throw ErroDeVeiculo("falha ao tentar navegar a posicao escolhida: " + para_texto(resultado));
+        throw ErroDeVeiculo("falha ao ir para a posição pedida: " + para_texto(resultado));
     }
 }
 

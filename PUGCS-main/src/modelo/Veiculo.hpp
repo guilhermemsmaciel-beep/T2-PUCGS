@@ -71,15 +71,16 @@ public:
     /// Pede ao autopiloto a troca do modo de voo.
     virtual void alterar_modo_de_voo(const std::string& modo) = 0;
 
-    // TODO (aluno): declare aqui o resto do contrato que a sua GCS precisa e
-    // implemente nas subclasses:
-    //
+    // --- comandos de voo ---------------------------------------------------
     virtual void armar() = 0;
     virtual void desarmar() = 0;
     /// Prepara o veículo (modo, armação) e decola até a altura pedida.
     virtual void decolar(double altura_m) = 0;
     virtual void pousar() = 0;
     virtual void retornar_para_casa() = 0;
+    /// Voa até o destino (latitude, longitude e altitude_absoluta_m).
+    /// Só faz sentido em voo; lança ErroDeVeiculo se o veículo estiver no chão.
+    virtual void ir_para(const Posicao& destino) = 0;
 
 protected:
     /// Modifica o estado e notifica os observadores.
@@ -122,10 +123,11 @@ public:
     void decolar(double altura_m) override ;
     void pousar() override ;
     void retornar_para_casa() override;
+    void ir_para(const Posicao& destino) override;
 
 private:
     /// O que o drone simulado está fazendo no momento.
-    enum class Manobra { Parado, Subindo, Pairando, Pousando, Retornando };
+    enum class Manobra { Parado, Subindo, Pairando, Pousando, Retornando, IndoPara };
 
     void laco_de_telemetria();
     /// Avança a simulação em dt segundos (chamada com mutex_simulacao_ travado).
@@ -141,6 +143,7 @@ private:
     std::mutex mutex_simulacao_;
     Manobra manobra_ = Manobra::Parado;
     double altitude_alvo_m_ = 0.0;
+    Posicao destino_{};  // usado pela manobra IndoPara
 };
 
 }  // namespace gcs

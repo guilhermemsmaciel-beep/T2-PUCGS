@@ -44,7 +44,7 @@ public:
     void decolar(double altura_m) override ;
     void pousar() override ;
     void retornar_para_casa() override;
-    void ir_para(Posicao pos);
+    void ir_para(const Posicao& destino) override;
 
 private:
     /// Espera o autopiloto confirmar o modo; lança ErroDeVeiculo se demorar.

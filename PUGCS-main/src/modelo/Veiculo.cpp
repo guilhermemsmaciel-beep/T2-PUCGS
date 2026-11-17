@@ -57,6 +57,7 @@ constexpr double ALTITUDE_CASA_M = 584.0;
 constexpr double SUBIDA_MAXIMA_M_S = 2.5;
 constexpr double DESCIDA_POUSO_M_S = 1.0;
 constexpr double VELOCIDADE_RTL_M_S = 5.0;
+constexpr double VELOCIDADE_IR_PARA_M_S = 5.0;
 constexpr double ALTITUDE_MINIMA_RTL_M = 15.0;
 constexpr double CONSUMO_PCT_POR_S = 0.1;       // bateria gasta com o drone armado
 constexpr double METROS_POR_GRAU = 111320.0;
@@ -73,6 +74,27 @@ std::string para_maiusculas(const std::string& texto) {
         maiusculo += static_cast<char>(std::toupper(static_cast<unsigned char>(caractere)));
     }
     return maiusculo;
+}
+
+/// Desloca o estado na horizontal em direção a (latitude, longitude), sem
+/// passar do ponto. Preenche a velocidade norte/leste e o rumo; devolve a
+/// distância que faltava, em metros.
+double voar_na_horizontal(EstadoVeiculo& estado, double latitude, double longitude,
+                          double velocidade_maxima, double dt, double& norte, double& leste) {
+    const double cos_lat = std::cos(estado.posicao.latitude * PI / 180.0);
+    const double dn = (latitude - estado.posicao.latitude) * METROS_POR_GRAU;
+    const double de = (longitude - estado.posicao.longitude) * METROS_POR_GRAU * cos_lat;
+    const double distancia = std::hypot(dn, de);
+    if (distancia < 0.5) {
+        return distancia;
+    }
+    const double velocidade = std::min(velocidade_maxima, distancia / dt);
+    norte = velocidade * dn / distancia;
+    leste = velocidade * de / distancia;
+    estado.posicao.latitude += norte * dt / METROS_POR_GRAU;
+    estado.posicao.longitude += leste * dt / (METROS_POR_GRAU * cos_lat);
+    estado.atitude.guinada = std::fmod(std::atan2(leste, norte) * 180.0 / PI + 360.0, 360.0);
+    return distancia;
 }
 
 }  // namespace
@@ -122,6 +144,8 @@ void VeiculoSimulado::passo(double t, double dt) {
     Manobra proxima = manobra_;
     const Manobra atual = manobra_;
     const double alvo = altitude_alvo_m_;
+    const Posicao destino = destino_;
+    double novo_alvo = alvo;
 
     atualizar([&](EstadoVeiculo& estado) {
         double subida = 0.0;  // m/s, positivo subindo
@@ -148,21 +172,26 @@ void VeiculoSimulado::passo(double t, double dt) {
                     subida = limitar(ALTITUDE_MINIMA_RTL_M - altitude, 0.0, SUBIDA_MAXIMA_M_S);
                     break;
                 }
-                const double cos_lat = std::cos(estado.posicao.latitude * PI / 180.0);
-                const double dn = (estado.home.latitude - estado.posicao.latitude) * METROS_POR_GRAU;
-                const double de =
-                    (estado.home.longitude - estado.posicao.longitude) * METROS_POR_GRAU * cos_lat;
-                const double distancia = std::hypot(dn, de);
+                const double distancia =
+                    voar_na_horizontal(estado, estado.home.latitude, estado.home.longitude,
+                                       VELOCIDADE_RTL_M_S, dt, norte, leste);
                 if (distancia < 0.5) {
                     proxima = Manobra::Pousando;
-                    break;
                 }
-                const double velocidade = std::min(VELOCIDADE_RTL_M_S, distancia);
-                norte = velocidade * dn / distancia;
-                leste = velocidade * de / distancia;
-                estado.posicao.latitude += norte * dt / METROS_POR_GRAU;
-                estado.posicao.longitude += leste * dt / (METROS_POR_GRAU * cos_lat);
-                estado.atitude.guinada = std::fmod(std::atan2(leste, norte) * 180.0 / PI + 360.0, 360.0);
+                break;
+            }
+            case Manobra::IndoPara: {
+                // Anda e sobe/desce ao mesmo tempo; ao chegar, paira no destino.
+                const double altitude_destino =
+                    destino.altitude_absoluta_m - estado.home.altitude_absoluta_m;
+                subida = limitar(altitude_destino - altitude, -SUBIDA_MAXIMA_M_S, SUBIDA_MAXIMA_M_S);
+                const double distancia =
+                    voar_na_horizontal(estado, destino.latitude, destino.longitude,
+                                       VELOCIDADE_IR_PARA_M_S, dt, norte, leste);
+                if (distancia < 0.5 && std::abs(altitude_destino - altitude) < 0.1) {
+                    proxima = Manobra::Pairando;
+                    novo_alvo = altitude_destino;
+                }
                 break;
             }
         }
@@ -198,6 +227,7 @@ void VeiculoSimulado::passo(double t, double dt) {
     });
 
     manobra_ = proxima;
+    altitude_alvo_m_ = novo_alvo;
 }
 
 void VeiculoSimulado::aplicar_modo(const std::string& modo) {
@@ -251,6 +281,19 @@ void VeiculoSimulado::pousar() {
 void VeiculoSimulado::retornar_para_casa() {
     std::lock_guard<std::mutex> trava(mutex_simulacao_);
     aplicar_modo("RTL");
+}
+
+void VeiculoSimulado::ir_para(const Posicao& destino) {
+    if (!estado().em_voo) {
+        throw ErroDeVeiculo("o drone precisa estar em voo para ir a uma posição");
+    }
+    if (destino.altitude_absoluta_m - estado().home.altitude_absoluta_m < 1.0) {
+        throw ErroDeVeiculo("destino abaixo de 1 m da casa; use pousar");
+    }
+    std::lock_guard<std::mutex> trava(mutex_simulacao_);
+    aplicar_modo("GUIDED");
+    destino_ = destino;
+    manobra_ = Manobra::IndoPara;
 }
 
 }  // namespace gcs
