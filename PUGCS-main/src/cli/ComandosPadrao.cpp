@@ -159,36 +159,46 @@ public:
 class Armar : public Comando {
 public:
     std::string nome() const override { return "armar"; }
-    std::string ajuda() const override { return "arma o veiculo"; }
+    std::string ajuda() const override { return "arma os motores"; }
 
     void executar(EstacaoDeControle& estacao, const std::vector<std::string>&) override {
         estacao.veiculo().armar();
+        std::cout << "motores armados\n";
     }
 };
 
+class Desarmar : public Comando {
+public:
+    std::string nome() const override { return "desarmar"; }
+    std::string ajuda() const override { return "desarma os motores (só no chão)"; }
+
+    void executar(EstacaoDeControle& estacao, const std::vector<std::string>&) override {
+        estacao.veiculo().desarmar();
+        std::cout << "motores desarmados\n";
+    }
+};
 
 class Pousar : public Comando {
 public:
     std::string nome() const override { return "pousar"; }
-    std::string ajuda() const override { return "pousa o veiculo"; }
+    std::string ajuda() const override { return "pousa no lugar onde está"; }
 
     void executar(EstacaoDeControle& estacao, const std::vector<std::string>&) override {
         estacao.veiculo().pousar();
+        std::cout << "pousando\n";
     }
 };
-
 
 class RTL : public Comando {
 public:
     std::string nome() const override { return "rtl"; }
-    std::string ajuda() const override { return "retorna veiculo ao ponto de decolagem"; }
+    std::string ajuda() const override { return "volta para o ponto de decolagem e pousa"; }
 
     void executar(EstacaoDeControle& estacao, const std::vector<std::string>&) override {
         estacao.veiculo().retornar_para_casa();
+        std::cout << "retornando para casa\n";
     }
 };
-
-
 
 class Gravar : public Comando {
 public:
@@ -229,6 +239,7 @@ RegistroDeComandos comandos_padrao() {
     registro.registrar(std::make_unique<Decolar>());
     registro.registrar(std::make_unique<Sair>());
     registro.registrar(std::make_unique<Armar>());
+    registro.registrar(std::make_unique<Desarmar>());
     registro.registrar(std::make_unique<Pousar>());
     registro.registrar(std::make_unique<RTL>());
     registro.registrar(std::make_unique<Gravar>());
