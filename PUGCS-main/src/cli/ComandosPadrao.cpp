@@ -114,7 +114,6 @@ public:
         }
         const double altura_m = ler_altura(argumentos.front());
 
-        estacao.veiculo().armar();
         estacao.veiculo().decolar(altura_m);
         std::cout << "decolando até " << altura_m << " m\n";
     }

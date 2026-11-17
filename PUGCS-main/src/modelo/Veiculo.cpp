@@ -101,7 +101,10 @@ void VeiculoSimulado::desarmar() {
 }
 
 void VeiculoSimulado::decolar(double altura_m) {
-    atualizar([=](EstadoVeiculo& estado) {estado.posicao.altitude_relativa_m = altura_m; });
+    atualizar([=](EstadoVeiculo& estado) {
+        estado.armado = true;
+        estado.posicao.altitude_relativa_m = altura_m;
+    });
 }
 
 void VeiculoSimulado::pousar() {

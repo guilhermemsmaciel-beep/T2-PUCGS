@@ -47,6 +47,9 @@ public:
     void ir_para(Posicao pos);
 
 private:
+    /// Espera o autopiloto confirmar o modo; lança ErroDeVeiculo se demorar.
+    void esperar_modo(const std::string& modo, double tempo_limite_s) const;
+
     class Impl;  // esconde o MAVSDK deste cabeçalho
     std::unique_ptr<Impl> impl_;
     std::string endereco_;

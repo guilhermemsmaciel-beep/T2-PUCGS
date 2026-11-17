@@ -1,5 +1,6 @@
 #include "modelo/Drone.hpp"
 
+#include <mavsdk/log_callback.hpp>
 #include <mavsdk/mavsdk.hpp>
 #include <mavsdk/plugins/action/action.hpp>
 #include <mavsdk/plugins/telemetry/telemetry.hpp>
@@ -7,11 +8,14 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <cmath>
 #include <iostream>
 #include <map>
+#include <regex>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -23,6 +27,43 @@ std::string para_maiusculas(std::string texto) {
         return static_cast<char>(std::toupper(letra));
     });
     return texto;
+}
+
+/// Modos de voo do ArduCopter e o número (custom_mode) de cada um.
+///
+/// Uma tabela só serve para os dois sentidos: trocar de modo (nome → número)
+/// e mostrar o modo atual (número → nome). O MAVSDK traduz os modos para os
+/// nomes do PX4 ("Offboard" no lugar de GUIDED, "Hold" no lugar de BRAKE),
+/// por isso lemos o número direto do HEARTBEAT.
+const std::map<std::string, int>& modos_arducopter() {
+    static const std::map<std::string, int> modos{
+        {"STABILIZE", 0}, {"ACRO", 1},       {"ALT_HOLD", 2},   {"AUTO", 3},
+        {"GUIDED", 4},    {"LOITER", 5},     {"RTL", 6},        {"CIRCLE", 7},
+        {"LAND", 9},      {"DRIFT", 11},     {"SPORT", 13},     {"FLIP", 14},
+        {"AUTOTUNE", 15}, {"POSHOLD", 16},   {"BRAKE", 17},     {"THROW", 18},
+        {"SMART_RTL", 21}, {"FOLLOW", 23},   {"ZIGZAG", 24},    {"AUTO_RTL", 27},
+    };
+    return modos;
+}
+
+/// Nome do modo a partir do número; "MODO_<n>" se não estiver na tabela.
+std::string nome_do_modo(long numero) {
+    for (const auto& [nome, valor] : modos_arducopter()) {
+        if (valor == numero) {
+            return nome;
+        }
+    }
+    return "MODO_" + std::to_string(numero);
+}
+
+/// Lê o campo custom_mode do JSON de um HEARTBEAT; -1 se não achar.
+long ler_custom_mode(const std::string& json) {
+    static const std::regex padrao{R"re("custom_mode"\s*:\s*(\d+))re"};
+    std::smatch achado;
+    if (std::regex_search(json, achado, padrao)) {
+        return std::stol(achado[1].str());
+    }
+    return -1;
 }
 
 /// O MAVSDK imprime os enums com operator<<; é a forma mais simples de
@@ -86,7 +127,15 @@ std::string normalizar_endereco(const std::string& endereco) {
 class Drone::Impl {
 public:
     Impl()
-        : nucleo(mavsdk::Mavsdk::Configuration{mavsdk::ComponentType::GroundStation}) {}
+        : nucleo(mavsdk::Mavsdk::Configuration{mavsdk::ComponentType::GroundStation}) {
+        // O MAVSDK escreve muitos logs de depuração no terminal, no meio do
+        // prompt. Deixamos passar só os erros dele; os avisos do autopiloto
+        // que interessam ao piloto chegam pelo STATUSTEXT (iniciar_telemetria).
+        mavsdk::log::subscribe([](mavsdk::log::Level nivel, const std::string&,
+                                  const std::string&, int) {
+            return nivel < mavsdk::log::Level::Err;  // true = "já tratei, não imprima"
+        });
+    }
 
     mavsdk::Mavsdk nucleo;
     std::shared_ptr<mavsdk::System> sistema;
@@ -154,9 +203,29 @@ void Drone::iniciar_telemetria() {
     // Cada assinatura é um callback chamado pela thread do MAVSDK. Tudo que
     // fazemos é traduzir o dado da biblioteca para o NOSSO modelo — assim o
     // resto do programa não depende do MAVSDK.
-    telemetria.subscribe_flight_mode([this](mavsdk::Telemetry::FlightMode modo) {
-        const std::string texto = para_texto(modo);
-        atualizar([&texto](EstadoVeiculo& estado) { estado.modo_de_voo = texto; });
+    // Modo de voo: lido do HEARTBEAT do autopiloto, com os nomes do ArduPilot.
+    const auto id_do_drone = impl_->sistema->get_system_id();
+    impl_->mavlink->subscribe_message(
+        "HEARTBEAT", [this, id_do_drone](mavsdk::MavlinkDirect::MavlinkMessage mensagem) {
+            constexpr unsigned COMPONENTE_AUTOPILOTO = 1;
+            if (mensagem.system_id != id_do_drone ||
+                mensagem.component_id != COMPONENTE_AUTOPILOTO) {
+                return;  // heartbeat de outra GCS, câmera, gimbal...
+            }
+            const long numero = ler_custom_mode(mensagem.fields_json);
+            if (numero < 0) {
+                return;
+            }
+            const std::string nome = nome_do_modo(numero);
+            atualizar([&nome](EstadoVeiculo& estado) { estado.modo_de_voo = nome; });
+        });
+
+    // Avisos do autopiloto (PreArm, falhas, failsafe): mostramos só os de
+    // severidade "warning" para cima, numa linha própria.
+    telemetria.subscribe_status_text([this](mavsdk::Telemetry::StatusText aviso) {
+        if (aviso.type >= mavsdk::Telemetry::StatusTextType::Warning) {
+            std::cout << "\n[" << nome() << "] " << aviso.text << std::endl;
+        }
     });
 
     telemetria.subscribe_attitude_euler([this](mavsdk::Telemetry::EulerAngle angulo) {
@@ -223,40 +292,32 @@ void Drone::iniciar_telemetria() {
 }
 
 void Drone::alterar_modo_de_voo(const std::string& modo) {
-    if (!impl_->acoes) {
+    if (!impl_->mavlink) {
         throw ErroDeVeiculo("alterar_modo_de_voo() antes de conectar()");
     }
-    mavsdk::Action& acoes = *impl_->acoes;
     const std::string alvo = para_maiusculas(modo);
 
-    // Modos do ArduCopter sem ação equivalente no MAVSDK: vão pelo número.
-    static const std::map<std::string, int> modos_ardupilot{
-        {"STABILIZE", 0}, {"AUTO", 3}, {"GUIDED", 4}, {"LOITER", 5}};
-    const auto modo_ardupilot = modos_ardupilot.find(alvo);
-    if (modo_ardupilot != modos_ardupilot.end()) {
-        enviar_modo_ardupilot(*impl_->mavlink, *impl_->sistema, modo_ardupilot->second, alvo);
-        return;
-    }
-
-    // Modos com ação equivalente no plugin Action.
-    const std::map<std::string, std::function<mavsdk::Action::Result()>> acoes_por_modo{
-        {"RTL", [&acoes] { return acoes.return_to_launch(); }},
-        {"HOLD", [&acoes] { return acoes.hold(); }},
-        {"LAND", [&acoes] { return acoes.land(); }},
-    };
-
-    const auto encontrado = acoes_por_modo.find(alvo);
-    if (encontrado == acoes_por_modo.end()) {
+    const auto encontrado = modos_arducopter().find(alvo);
+    if (encontrado == modos_arducopter().end()) {
         std::string disponiveis;
-        for (const auto& par : acoes_por_modo) {
+        for (const auto& par : modos_arducopter()) {
             disponiveis += (disponiveis.empty() ? "" : ", ") + par.first;
         }
-        throw NaoImplementado("modo '" + alvo + "'; disponíveis: " + disponiveis);
+        throw ErroDeVeiculo("modo '" + alvo + "' não existe no ArduCopter; disponíveis: " +
+                            disponiveis);
     }
+    enviar_modo_ardupilot(*impl_->mavlink, *impl_->sistema, encontrado->second, alvo);
+}
 
-    const mavsdk::Action::Result resultado = encontrado->second();
-    if (resultado != mavsdk::Action::Result::Success) {
-        throw ErroDeVeiculo("o autopiloto recusou o modo " + alvo + ": " + para_texto(resultado));
+void Drone::esperar_modo(const std::string& modo, double tempo_limite_s) const {
+    const auto limite = std::chrono::steady_clock::now() +
+                        std::chrono::duration<double>(tempo_limite_s);
+    while (modo_de_voo() != modo) {
+        if (std::chrono::steady_clock::now() > limite) {
+            throw ErroDeVeiculo("o autopiloto não entrou em " + modo + " (modo atual: " +
+                                modo_de_voo() + ")");
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
 
@@ -291,7 +352,22 @@ void Drone::retornar_para_casa() {
 }
 
 void Drone::decolar(double altura_m) {
-    impl_->acoes->set_takeoff_altitude(static_cast<float>(altura_m));
+    if (estado().em_voo) {
+        throw ErroDeVeiculo("o drone já está em voo");
+    }
+    // No ArduCopter a decolagem por comando só funciona em GUIDED, e alguns
+    // modos (BRAKE, LAND, RTL...) nem deixam armar. Por isso trocamos de modo
+    // antes e esperamos o autopiloto confirmar pelo HEARTBEAT.
+    if (modo_de_voo() != "GUIDED") {
+        alterar_modo_de_voo("GUIDED");
+        esperar_modo("GUIDED", 3.0);
+    }
+    armar();
+
+    const auto altura = impl_->acoes->set_takeoff_altitude(static_cast<float>(altura_m));
+    if (altura != mavsdk::Action::Result::Success) {
+        throw ErroDeVeiculo("altura de decolagem recusada: " + para_texto(altura));
+    }
     const auto resultado = impl_->acoes->takeoff();
     if (resultado != mavsdk::Action::Result::Success) {
         throw ErroDeVeiculo("falha na decolagem: " + para_texto(resultado));

@@ -76,6 +76,7 @@ public:
     //
     virtual void armar() = 0;
     virtual void desarmar() = 0;
+    /// Prepara o veículo (modo, armação) e decola até a altura pedida.
     virtual void decolar(double altura_m) = 0;
     virtual void pousar() = 0;
     virtual void retornar_para_casa() = 0;
