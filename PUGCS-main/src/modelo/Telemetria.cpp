@@ -1,5 +1,6 @@
 #include "modelo/Telemetria.hpp"
 
+#include <cmath>
 #include <iomanip>
 #include <sstream>
 
@@ -14,8 +15,16 @@ std::string EstadoVeiculo::resumo() const {
           << " alt_rel=" << std::setw(7) << posicao.altitude_relativa_m << " m"
           << " rolagem=" << std::setw(6) << atitude.rolagem << " deg"
           << " arfagem=" << std::setw(6) << atitude.arfagem << " deg"
-          << " bat=" << std::setw(5) << bateria.percentual << " %";
+          << " vel=" << std::setw(5) << velocidade.no_solo() << " m/s"
+          << " subida=" << std::setw(5) << velocidade.taxa_de_subida() << " m/s"
+          << " bat=" << std::setw(5) << bateria.percentual << " %"
+          << " sat=" << gps.satelites
+          << " radio=" << (radio.disponivel ? std::to_string(static_cast<int>(radio.sinal_percentual)) + "%" : "sem sinal");
     return fluxo.str();
+}
+
+double Velocidade::no_solo() const {
+    return std::hypot(norte_m_s, leste_m_s);
 }
 
 double segundos_entre(Instante inicio, Instante fim) {

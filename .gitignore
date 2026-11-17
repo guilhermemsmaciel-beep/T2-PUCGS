@@ -4,3 +4,6 @@ mavsdk_server_macos_arm64
 # Ignorar pasta ardupilot
 ardupilot/
 .vscode/
+build/
+.DS_Store
+*.csv
