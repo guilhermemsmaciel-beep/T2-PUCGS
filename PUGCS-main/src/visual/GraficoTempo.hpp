@@ -37,9 +37,9 @@ private:
 
 /// Catálogo consultado pelo comando `plotar`.
 ///
-/// TODO (aluno): acrescente campos novos aqui — velocidade no solo, taxa de
-/// subida, tensão da bateria, número de satélites, rumo... Cada entrada nova já
-/// aparece sozinha no `plotar` e no `ajuda`, sem mexer em mais nada.
+/// Cada entrada liga um nome digitado a um rótulo, uma unidade e uma função que
+/// extrai o número do estado. Uma entrada nova aparece sozinha no `plotar` e no
+/// `ajuda`, sem mexer em mais nada.
 const std::map<std::string, GraficoTempo::Campo>& campos_disponiveis();
 
 /// "altitude, bateria, ..." — usado nas mensagens de ajuda e de erro.
