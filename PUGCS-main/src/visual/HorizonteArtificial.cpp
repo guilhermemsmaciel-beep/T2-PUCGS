@@ -18,13 +18,16 @@ namespace {
 /// — é isso que mantém o horizonte com a inclinação correta.
 constexpr double GRAUS_POR_LINHA = 4.0;
 constexpr double GRAUS_POR_COLUNA = 2.0;
+constexpr double LIMITE_ESCADA = 35.0;
+constexpr double LARGURA_ESCADA = 15.0;
+constexpr double RAIO_ARCO = 40.0;
 
 constexpr double PI = 3.14159265358979323846;
 
 /// O que há atrás de cada caractere.
-enum class Fundo { Ceu, Chao, Horizonte, Caixa };
+enum class Fundo { Ceu, Chao, Horizonte, Seta, Cinza, Caixa };
 /// A cor do caractere desenhado em cima do fundo.
-enum class Tinta { Padrao, Simbolo, Texto };
+enum class Tinta { Padrao, Simbolo, Branco, Texto };
 
 struct Celula {
     Fundo fundo = Fundo::Ceu;
@@ -32,19 +35,27 @@ struct Celula {
     char glifo = ' ';
 };
 
-const std::string FUNDO_CEU = terminal::fundo(0x2A, 0x78, 0xD6);
-const std::string FUNDO_CHAO = terminal::fundo(0x8C, 0x5A, 0x2B);
-const std::string FUNDO_HORIZONTE = terminal::fundo(0xFC, 0xFC, 0xFB);
-const std::string FUNDO_CAIXA = terminal::fundo(0x1A, 0x1A, 0x19);
-const std::string FRENTE_PADRAO = terminal::frente(0xFC, 0xFC, 0xFB);
-const std::string FRENTE_SIMBOLO = terminal::frente(0xED, 0xA1, 0x00);
-const std::string FRENTE_TEXTO = terminal::frente(0xFC, 0xFC, 0xFB);
+// Codigos RGB de fundo
+const std::string FUNDO_CEU = terminal::fundo(0x2A, 0x78, 0xD6); // azul
+const std::string FUNDO_CHAO = terminal::fundo(0x8C, 0x5A, 0x2B); // marrom
+const std::string FUNDO_HORIZONTE = terminal::fundo(0xFC, 0xFC, 0xFB); // branco
+const std::string FUNDO_CAIXA = terminal::fundo(0x1A, 0x1A, 0x19); // preto
+const std::string FUNDO_SETA = terminal::fundo(0xFF, 0xFF, 0x00); // amarelo
+const std::string FUNDO_CINZA = terminal::fundo(0xC8, 0xC8, 0xC8); // cinza
+
+// Codigos RGB de tinta
+const std::string FRENTE_PADRAO = terminal::frente(0xFC, 0xFC, 0xFB); // branco
+const std::string FRENTE_SIMBOLO = terminal::frente(0xED, 0xA1, 0x00); // amarelo
+const std::string FRENTE_TEXTO = terminal::frente(0xFC, 0xFC, 0xFB); // branco
+const std::string FRENTE_BRANCO = terminal::frente(0xFF, 0xFF, 0xFF);
 
 const std::string& codigo(Fundo fundo) {
     switch (fundo) {
         case Fundo::Chao: return FUNDO_CHAO;
         case Fundo::Horizonte: return FUNDO_HORIZONTE;
         case Fundo::Caixa: return FUNDO_CAIXA;
+        case Fundo::Seta: return FUNDO_SETA;
+        case Fundo::Cinza: return FUNDO_CINZA;
         case Fundo::Ceu: break;
     }
     return FUNDO_CEU;
@@ -54,6 +65,7 @@ const std::string& codigo(Tinta tinta) {
     switch (tinta) {
         case Tinta::Simbolo: return FRENTE_SIMBOLO;
         case Tinta::Texto: return FRENTE_TEXTO;
+        case Tinta::Branco: return FRENTE_BRANCO;
         case Tinta::Padrao: break;
     }
     return FRENTE_PADRAO;
@@ -72,6 +84,7 @@ HorizonteArtificial::HorizonteArtificial(int largura, int altura)
       largura_(std::max(40, largura)),
       altura_(std::max(11, altura | 1)) {}  // altura ímpar: existe uma linha central
 
+
 std::string HorizonteArtificial::quadro(const Historico& historico) const {
     bool recebeu = false;
     const EstadoVeiculo estado = historico.ultimo(&recebeu);
@@ -88,19 +101,106 @@ std::string HorizonteArtificial::quadro(const Historico& historico) const {
     const double centro_linha = (altura_ - 1) / 2.0;
     const double centro_coluna = (largura_ - 1) / 2.0;
 
+    // Vetor com os caracteres, vulgo "celulas"
     std::vector<std::vector<Celula>> tela(
         static_cast<std::size_t>(altura_),
         std::vector<Celula>(static_cast<std::size_t>(largura_)));
 
+    // bool aproximacao = [] (double valor, double medida) {
+    //     for (int i = medida)
+    // }
+
+
+    // Versão Original
+    // for (int linha = 0; linha < altura_; ++linha) {
+    //     for (int coluna = 0; coluna < largura_; ++coluna) {
+    //         const double y = (centro_linha - linha) * GRAUS_POR_LINHA; // Posicao em graus horizontal
+    //         const double x = (coluna - centro_coluna) * GRAUS_POR_COLUNA; // Posicao em graus vertical
+    //         const double u = -x * seno + y * cosseno + estado.atitude.arfagem; // Distancia em graus entre celula e linha do horizonte
+    //         const double inverse_u = x * cosseno + y * seno + estado.atitude.arfagem; // u rotacionado em 90 graus
+    //         const double resto = (std::abs(u) < LIMITE_ESCADA) ? std::abs(std::remainder(u, 10.0)) : 100.0;
+    //         const double raio = sqrt((y * y) + (x * x));
+    //         Celula& celula = tela[static_cast<std::size_t>(linha)][static_cast<std::size_t>(coluna)];
+    //         // || std::abs(inverse_u) <= GRAUS_POR_LINHA * 0.6
+            
+    //         // Desenha Arco de Rolagem
+    //         if (y >= 0.0 && raio <= (RAIO_ARCO + (GRAUS_POR_LINHA * 0.6)) && raio > (RAIO_ARCO - (GRAUS_POR_LINHA * 0.3))) {
+    //             if (-u <= GRAUS_POR_LINHA * 0.6 && std::abs(inverse_u) <= GRAUS_POR_LINHA * 0.6) {
+    //                 celula.fundo = Fundo::Seta;
+    //                 //celula.glifo = 'o';
+    //                 //celula.tinta = Tinta::Simbolo;
+    //             }
+    //             else {
+    //                 celula.fundo = Fundo::Cinza;
+    //                 //celula.tinta = Tinta::Branco;
+    //                 //celula.glifo = 'o';
+    //             }
+    //         }
+    //         else if (std::abs(u) <= GRAUS_POR_LINHA * 0.6 ) { // Desenha Horizonte
+    //             celula.fundo = Fundo::Horizonte;
+    //         } 
+    //         else if (resto <= GRAUS_POR_LINHA * 0.6) { // Desenha Escada de Arfagem
+    //             if ((inverse_u) < LARGURA_ESCADA && (inverse_u) > -LARGURA_ESCADA) {
+    //                 celula.fundo = Fundo::Cinza;
+    //                 //celula.glifo = '-';
+    //                 //celula.tinta = Tinta::Branco;
+    //                 if (std::abs(inverse_u) <= GRAUS_POR_LINHA * 0.6) {
+    //                     //celula.glifo = '1';
+    //                 }
+    //                     //celula.glifo = (std::abs(seno) < 0.5) ? '-' : '|';
+    //             }
+    //             else {
+    //                 celula.fundo = (u > 0.0) ? Fundo::Ceu : Fundo::Chao; 
+    //             }
+                
+    //         }
+    //         else {
+    //             celula.fundo = (u > 0.0) ? Fundo::Ceu : Fundo::Chao;
+    //         }
+    //     }
+    // }
+
+
+    // Versão Teste
     for (int linha = 0; linha < altura_; ++linha) {
         for (int coluna = 0; coluna < largura_; ++coluna) {
-            const double y = (centro_linha - linha) * GRAUS_POR_LINHA;
-            const double x = (coluna - centro_coluna) * GRAUS_POR_COLUNA;
-            const double u = -x * seno + y * cosseno + estado.atitude.arfagem;
+            const double y = (centro_linha - linha) * GRAUS_POR_LINHA; // Posicao em graus horizontal
+            const double x = (coluna - centro_coluna) * GRAUS_POR_COLUNA; // Posicao em graus vertical
+            const double u = -x * seno + y * cosseno + estado.atitude.arfagem; // Distancia em graus entre celula e linha do horizonte
+            const double inverse_u = x * cosseno + y * seno + estado.atitude.arfagem; // u rotacionado em 90 graus
+            const double resto = (std::abs(u) < LIMITE_ESCADA) ? std::abs(std::remainder(u, 10.0)) : 100.0; // Define quantos graus da escada devem aparecer
+            const double raio = sqrt((y * y) + (x * x));
             Celula& celula = tela[static_cast<std::size_t>(linha)][static_cast<std::size_t>(coluna)];
-            if (std::abs(u) <= GRAUS_POR_LINHA * 0.6) {
+            // || std::abs(inverse_u) <= GRAUS_POR_LINHA * 0.6
+            
+            // Desenha Arco de Rolagem
+            if (y >= 0.0 && raio <= (RAIO_ARCO + (GRAUS_POR_LINHA * 0.6)) && raio > (RAIO_ARCO - (GRAUS_POR_LINHA * 0.3))) {
+                if (-u <= GRAUS_POR_LINHA * 0.6 && std::abs(inverse_u) <= GRAUS_POR_LINHA * 0.6) {
+                    //celula.fundo = Fundo::Seta;
+                    celula.glifo = 'R';
+                    celula.tinta = Tinta::Simbolo;
+                }
+                else {
+                    celula.glifo = '.';
+                    celula.tinta = Tinta::Branco;
+                    //celula.fundo = Fundo::Cinza;
+                    //celula.tinta = Tinta::Branco;
+                    //celula.glifo = 'o';
+                }
+                celula.fundo = (u > 0.0) ? Fundo::Ceu : Fundo::Chao;
+            }
+            else if (std::abs(u) <= GRAUS_POR_LINHA * 0.6 ) { // Desenha Horizonte
                 celula.fundo = Fundo::Horizonte;
-            } else {
+            }
+            else { // resto <= GRAUS_POR_LINHA * 0.6 &&
+                if (resto <= GRAUS_POR_LINHA * 0.6 && (inverse_u) < LARGURA_ESCADA && (inverse_u) > -LARGURA_ESCADA) {
+                    celula.tinta = Tinta::Branco;
+                    // if (estado.atitude.rolagem >= 20.0) celula.glifo = '/';
+                    // else if (estado.atitude.rolagem <= -20.0) celula.glifo = '\\'; 
+                    // else celula.glifo = '-';
+                    celula.glifo = '\'';
+                    //celula.fundo = Fundo::Cinza;
+                }
                 celula.fundo = (u > 0.0) ? Fundo::Ceu : Fundo::Chao;
             }
         }
@@ -123,11 +223,28 @@ std::string HorizonteArtificial::quadro(const Historico& historico) const {
             celula.fundo = *fundo;
         }
     };
+
+
+
+    // Escreve o simbolo da aeronave (=====o======)
     for (int distancia = 5; distancia <= 11; ++distancia) {
-        escrever(linha_central, coluna_central - distancia, '=', Tinta::Simbolo);
-        escrever(linha_central, coluna_central + distancia, '=', Tinta::Simbolo);
+        escrever(linha_central, coluna_central - distancia, '=', Tinta::Simbolo, Fundo::Seta);
+        escrever(linha_central, coluna_central + distancia, '=', Tinta::Simbolo, Fundo::Seta);
     }
-    escrever(linha_central, coluna_central, 'o', Tinta::Simbolo);
+    escrever(linha_central, coluna_central, 'o', Tinta::Simbolo, Fundo::Seta);
+
+
+    // for (int distancia = 0; distancia <= 20; distancia++) {
+    //     escrever(linha_central + 7, coluna_central - distancia, '-', Tinta::Simbolo, Fundo::Cinza);
+    //     escrever(linha_central + 7, coluna_central + distancia, '-', Tinta::Simbolo, Fundo::Cinza);
+    // }
+    // Teste
+    // for (int linha = 0; linha < altura_; linha++) {
+    //     for (int coluna = 0; coluna < largura_; coluna++) {
+    //         Celula& celula = tela[linha][coluna];
+    //         celula.glifo = 'a';
+    //     }
+    // }
 
     // 3. As leituras numéricas, em uma caixa escura para ficarem legíveis tanto
     //    sobre o céu quanto sobre o chão.
@@ -180,4 +297,14 @@ std::string HorizonteArtificial::quadro(const Historico& historico) const {
 //  * pintar de vermelho quando a rolagem passar de um limite de segurança;
 //  * indicador de bateria e de modo de voo com destaque quando houver falha.
 
+
+// Escada de Arfagem: fixa em relação ao horizonte. Se o horizonte tá inclinado, a escada acompanha. 
+// são basicamente linhas brancas retas com o número ao lado. Parecido com a linha de horizonte só que deslocada
+
+
+
 }  // namespace gcs
+
+
+
+// ./mini_gcs --endereco udpin://:14552 --simulado
