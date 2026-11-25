@@ -1,11 +1,13 @@
 #include "visual/HorizonteArtificial.hpp"
 
+#include <iostream>
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <optional>
 #include <sstream>
 #include <vector>
+#include <string>
 
 #include "modelo/Telemetria.hpp"
 #include "visual/Terminal.hpp"
@@ -21,13 +23,17 @@ constexpr double GRAUS_POR_COLUNA = 2.0;
 constexpr double LIMITE_ESCADA = 35.0;
 constexpr double LARGURA_ESCADA = 15.0;
 constexpr double RAIO_ARCO = 40.0;
+constexpr int LARGURA_FITA = 8;
+constexpr int LINHAS_FITA = 5;
+constexpr double PASSO_FITA = 10.0;
+constexpr double PASSO_RUMO = 10.0;
 
 constexpr double PI = 3.14159265358979323846;
 
 /// O que há atrás de cada caractere.
-enum class Fundo { Ceu, Chao, Horizonte, Seta, Cinza, Caixa };
+enum class Fundo { Ceu, Chao, Horizonte, Seta, Cinza, Caixa, Vermelho };
 /// A cor do caractere desenhado em cima do fundo.
-enum class Tinta { Padrao, Simbolo, Branco, Texto };
+enum class Tinta { Padrao, Simbolo, Branco, Preto, Texto };
 
 struct Celula {
     Fundo fundo = Fundo::Ceu;
@@ -42,12 +48,14 @@ const std::string FUNDO_HORIZONTE = terminal::fundo(0xFC, 0xFC, 0xFB); // branco
 const std::string FUNDO_CAIXA = terminal::fundo(0x1A, 0x1A, 0x19); // preto
 const std::string FUNDO_SETA = terminal::fundo(0xFF, 0xFF, 0x00); // amarelo
 const std::string FUNDO_CINZA = terminal::fundo(0xC8, 0xC8, 0xC8); // cinza
+const std::string FUNDO_VERMELHO = terminal::fundo(0xE2, 0x2B, 0x2B); //vermelho
 
 // Codigos RGB de tinta
 const std::string FRENTE_PADRAO = terminal::frente(0xFC, 0xFC, 0xFB); // branco
 const std::string FRENTE_SIMBOLO = terminal::frente(0xED, 0xA1, 0x00); // amarelo
 const std::string FRENTE_TEXTO = terminal::frente(0xFC, 0xFC, 0xFB); // branco
 const std::string FRENTE_BRANCO = terminal::frente(0xFF, 0xFF, 0xFF);
+const std::string FRENTE_PRETO = terminal::frente(0x1A, 0x1A, 0x19); 
 
 const std::string& codigo(Fundo fundo) {
     switch (fundo) {
@@ -56,6 +64,7 @@ const std::string& codigo(Fundo fundo) {
         case Fundo::Caixa: return FUNDO_CAIXA;
         case Fundo::Seta: return FUNDO_SETA;
         case Fundo::Cinza: return FUNDO_CINZA;
+        case Fundo::Vermelho: return FUNDO_VERMELHO;
         case Fundo::Ceu: break;
     }
     return FUNDO_CEU;
@@ -66,6 +75,7 @@ const std::string& codigo(Tinta tinta) {
         case Tinta::Simbolo: return FRENTE_SIMBOLO;
         case Tinta::Texto: return FRENTE_TEXTO;
         case Tinta::Branco: return FRENTE_BRANCO;
+        case Tinta::Preto: return FRENTE_PRETO;
         case Tinta::Padrao: break;
     }
     return FRENTE_PADRAO;
@@ -106,9 +116,6 @@ std::string HorizonteArtificial::quadro(const Historico& historico) const {
         static_cast<std::size_t>(altura_),
         std::vector<Celula>(static_cast<std::size_t>(largura_)));
 
-    // bool aproximacao = [] (double valor, double medida) {
-    //     for (int i = medida)
-    // }
 
 
     // Versão Original
@@ -160,53 +167,6 @@ std::string HorizonteArtificial::quadro(const Historico& historico) const {
     //     }
     // }
 
-
-    // Versão Teste
-    for (int linha = 0; linha < altura_; ++linha) {
-        for (int coluna = 0; coluna < largura_; ++coluna) {
-            const double y = (centro_linha - linha) * GRAUS_POR_LINHA; // Posicao em graus horizontal
-            const double x = (coluna - centro_coluna) * GRAUS_POR_COLUNA; // Posicao em graus vertical
-            const double u = -x * seno + y * cosseno + estado.atitude.arfagem; // Distancia em graus entre celula e linha do horizonte
-            const double inverse_u = x * cosseno + y * seno + estado.atitude.arfagem; // u rotacionado em 90 graus
-            const double resto = (std::abs(u) < LIMITE_ESCADA) ? std::abs(std::remainder(u, 10.0)) : 100.0; // Define quantos graus da escada devem aparecer
-            const double raio = sqrt((y * y) + (x * x));
-            Celula& celula = tela[static_cast<std::size_t>(linha)][static_cast<std::size_t>(coluna)];
-            // || std::abs(inverse_u) <= GRAUS_POR_LINHA * 0.6
-            
-            // Desenha Arco de Rolagem
-            if (y >= 0.0 && raio <= (RAIO_ARCO + (GRAUS_POR_LINHA * 0.6)) && raio > (RAIO_ARCO - (GRAUS_POR_LINHA * 0.3))) {
-                if (-u <= GRAUS_POR_LINHA * 0.6 && std::abs(inverse_u) <= GRAUS_POR_LINHA * 0.6) {
-                    //celula.fundo = Fundo::Seta;
-                    celula.glifo = 'R';
-                    celula.tinta = Tinta::Simbolo;
-                }
-                else {
-                    celula.glifo = '.';
-                    celula.tinta = Tinta::Branco;
-                    //celula.fundo = Fundo::Cinza;
-                    //celula.tinta = Tinta::Branco;
-                    //celula.glifo = 'o';
-                }
-                celula.fundo = (u > 0.0) ? Fundo::Ceu : Fundo::Chao;
-            }
-            else if (std::abs(u) <= GRAUS_POR_LINHA * 0.6 ) { // Desenha Horizonte
-                celula.fundo = Fundo::Horizonte;
-            }
-            else { // resto <= GRAUS_POR_LINHA * 0.6 &&
-                if (resto <= GRAUS_POR_LINHA * 0.6 && (inverse_u) < LARGURA_ESCADA && (inverse_u) > -LARGURA_ESCADA) {
-                    celula.tinta = Tinta::Branco;
-                    // if (estado.atitude.rolagem >= 20.0) celula.glifo = '/';
-                    // else if (estado.atitude.rolagem <= -20.0) celula.glifo = '\\'; 
-                    // else celula.glifo = '-';
-                    celula.glifo = '\'';
-                    //celula.fundo = Fundo::Cinza;
-                }
-                celula.fundo = (u > 0.0) ? Fundo::Ceu : Fundo::Chao;
-            }
-        }
-    }
-
-    // 2. O símbolo da aeronave, sempre fixo no centro: é a referência do piloto.
     const int linha_central = altura_ / 2;
     const int coluna_central = largura_ / 2;
     // Escreve um caractere por cima do desenho. `fundo` nulo mantém o céu/chão
@@ -224,27 +184,159 @@ std::string HorizonteArtificial::quadro(const Historico& historico) const {
         }
     };
 
+    int linhas_fita = std::max(0, std::min(LINHAS_FITA, linha_central - 5));
 
+    // lambda para desenhar as fitas de altitude e velocidade
+    auto desenhar_fita = [&](double valor, int coluna_inicial) {
+        for (int distancia = -linhas_fita; distancia <= linhas_fita; distancia++) {  
+            std::string texto;
+            if (distancia % 2 == 0) {
+                std::ostringstream fluxo;
+                fluxo << '|' << std::fixed << std::setprecision(2)
+                    << std::setw(LARGURA_FITA - 2) << (valor + distancia * PASSO_FITA) << '|';
+                texto = fluxo.str();
+            } else {
+                texto = "   --   ";
+            }
+            texto.resize(LARGURA_FITA, ' ');  // sempre exatamente LARGURA_FITA caracteres
+
+            for (int i = 0; i < LARGURA_FITA; i++) {
+                escrever(linha_central - distancia, coluna_inicial + i, texto[i],
+                        (distancia == 0) ? Tinta::Preto : Tinta::Branco,
+                        (distancia == 0) ? Fundo::Seta : Fundo::Caixa);
+            }
+        }
+    };
+
+
+
+    // Versão Teste
+    for (int linha = 0; linha < altura_; ++linha) {
+        for (int coluna = 0; coluna < largura_; ++coluna) {
+            const double y = (centro_linha - linha) * GRAUS_POR_LINHA;  // Posicao em graus horizontal
+            const double x = (coluna - centro_coluna) * GRAUS_POR_COLUNA;  // Posicao em graus vertical
+            const double u = -x * seno + y * cosseno + estado.atitude.arfagem;  // Distancia em graus entre celula e linha do horizonte
+            const double inverse_u = x * cosseno + y * seno + estado.atitude.arfagem;  // u rotacionado em 90 graus
+            const double resto = (std::abs(u) < LIMITE_ESCADA) ? std::abs(std::remainder(u, 10.0)) : 100.0;  // Define quantos graus da escada devem aparecer
+            const double raio = sqrt((y * y) + (x * x));  // Define o raio para o arco de rolagem
+            Celula& celula = tela[static_cast<std::size_t>(linha)][static_cast<std::size_t>(coluna)];
+            
+            // Desenha Arco de Rolagem
+            if (raio <= (RAIO_ARCO + (GRAUS_POR_LINHA * 0.6)) && raio > (RAIO_ARCO - (GRAUS_POR_LINHA * 0.3))) {
+                if (y >= 0.0) {
+                    if (-u <= GRAUS_POR_LINHA * 0.6 && std::abs(inverse_u) <= GRAUS_POR_LINHA * 0.6) {
+                        celula.fundo = Fundo::Seta;
+                        celula.glifo = '|';
+                        celula.tinta = Tinta::Simbolo;
+                    }
+                    else {
+                        celula.glifo = '.';
+                        celula.tinta = Tinta::Branco;
+                    }
+                }
+                else {
+                    if (-u <= GRAUS_POR_LINHA * 0.6 && std::abs(inverse_u) <= GRAUS_POR_LINHA * 0.6) {
+                        celula.fundo = Fundo::Vermelho;
+                        std::string rol_lim = "Rolagem excessiva. Tome cuidado";
+                        for (std::size_t i = 0; i < rol_lim.size(); i++) {
+                            escrever(linha_central - 1, coluna_central -(rol_lim.size()/2) + i, rol_lim[i],
+                            Tinta::Branco, Fundo::Caixa);
+                        }
+                    }
+                }
+                if (celula.fundo != Fundo::Seta && celula.fundo != Fundo::Vermelho)
+                    celula.fundo = (std::abs(u) <= GRAUS_POR_LINHA * 0.6) ? Fundo::Horizonte : (u > 0.0) ? Fundo::Ceu : Fundo::Chao;
+            }
+            else if (std::abs(u) <= GRAUS_POR_LINHA * 0.6 ) { // Desenha Horizonte
+                celula.fundo = Fundo::Horizonte;
+            }
+            else { 
+                if (resto <= GRAUS_POR_LINHA * 0.6 && (inverse_u) < LARGURA_ESCADA && (inverse_u) > -LARGURA_ESCADA) {
+                    celula.tinta = Tinta::Preto;
+                    celula.glifo = '\''; // Escada de Arfagem
+                }
+                celula.fundo = (u > 0.0) ? Fundo::Ceu : Fundo::Chao;
+            }
+        }
+    }
+
+   
 
     // Escreve o simbolo da aeronave (=====o======)
     for (int distancia = 5; distancia <= 11; ++distancia) {
-        escrever(linha_central, coluna_central - distancia, '=', Tinta::Simbolo, Fundo::Seta);
-        escrever(linha_central, coluna_central + distancia, '=', Tinta::Simbolo, Fundo::Seta);
+        escrever(linha_central, coluna_central - distancia, '=', Tinta::Simbolo);
+        escrever(linha_central, coluna_central + distancia, '=', Tinta::Simbolo);
     }
-    escrever(linha_central, coluna_central, 'o', Tinta::Simbolo, Fundo::Seta);
+    escrever(linha_central, coluna_central, 'o', Tinta::Simbolo);
+
+   
+    
+    //Desenha as fitas de velocidade e altitude
+    double velocidade = sqrt((estado.velocidade.leste_m_s * estado.velocidade.leste_m_s) + (estado.velocidade.norte_m_s * estado.velocidade.norte_m_s));
+    desenhar_fita(velocidade, 0);
+    desenhar_fita(estado.posicao.altitude_relativa_m, largura_ - LARGURA_FITA);
 
 
-    // for (int distancia = 0; distancia <= 20; distancia++) {
-    //     escrever(linha_central + 7, coluna_central - distancia, '-', Tinta::Simbolo, Fundo::Cinza);
-    //     escrever(linha_central + 7, coluna_central + distancia, '-', Tinta::Simbolo, Fundo::Cinza);
-    // }
-    // Teste
-    // for (int linha = 0; linha < altura_; linha++) {
-    //     for (int coluna = 0; coluna < largura_; coluna++) {
-    //         Celula& celula = tela[linha][coluna];
-    //         celula.glifo = 'a';
-    //     }
-    // }
+    // Dsenha a bateria
+    unsigned int bateria_int = estado.bateria.percentual;
+    std::ostringstream bateria_stream;
+    bateria_stream << bateria_int;
+    std::string bateria = "[" + bateria_stream.str() + "%]";
+
+    for (std::size_t i = 0; i < bateria.size(); i++) {
+        escrever(linha_central - linha_central, largura_ - bateria.size() + i, bateria[i],
+        Tinta::Branco, Fundo::Caixa);
+    }
+    if (bateria_int <= 20) {
+        std::string mensagem = "Bateria baixa. Pouse imediatamente";
+        for (std::size_t i = 0; i < mensagem.size(); i++) {
+            escrever(linha_central - 1, coluna_central - (mensagem.size()/2) + i, mensagem[i],
+            Tinta::Branco, Fundo::Caixa);
+        }
+    }
+
+
+
+    // Desenha fita de rumo
+    int linha_rumo = altura_ - 2;
+    int de_cada_lado = std::min(2, std::max(0, (largura_ / 2 - LARGURA_FITA - LARGURA_FITA / 2) / LARGURA_FITA));
+
+    for (int centro = -de_cada_lado; centro <= de_cada_lado; centro++) {
+        double valor = std::fmod(estado.atitude.guinada + centro * PASSO_RUMO, 360.0);
+        if (valor < 0.0) {
+            valor += 360.0;
+        }
+
+        std::ostringstream fluxo;
+        fluxo << '|' << std::fixed << std::setprecision(2)
+            << std::setw(LARGURA_FITA - 2) << valor << '|';
+        std::string texto = fluxo.str(); 
+
+        int inicio = coluna_central - (LARGURA_FITA / 2) + centro * LARGURA_FITA;
+        for (int i = 0; i < LARGURA_FITA; i++) {
+            escrever(linha_rumo, inicio + i, texto[i],
+                    (centro == 0) ? Tinta::Preto : Tinta::Branco,
+                    (centro == 0) ? Fundo::Seta : Fundo::Caixa);
+        }
+    }
+
+
+    // Teste fita de velocidade
+    // std::cout << estado.velocidade.norte_m_s << std::endl;
+    //std::cout << estado.velocidade.leste_m_s << std::endl;
+    //std::cout << estado.velocidade.baixo_m_s << std::endl;
+
+    
+
+    // escrever(linha_central + distancia, coluna_central + 29, ' ', Tinta::Simbolo, Fundo::Caixa);
+    // escrever(linha_central - distancia, coluna_central + 29, ' ', Tinta::Simbolo, Fundo::Caixa);
+    // escrever(linha_central + distancia, coluna_central + 30, ' ', Tinta::Simbolo, Fundo::Caixa);
+    // escrever(linha_central - distancia, coluna_central + 30, ' ', Tinta::Simbolo, Fundo::Caixa);
+    // escrever(linha_central + distancia, coluna_central + 31, ' ', Tinta::Simbolo, Fundo::Caixa);
+    // escrever(linha_central - distancia, coluna_central + 31, ' ', Tinta::Simbolo, Fundo::Caixa);
+    
+
+    
 
     // 3. As leituras numéricas, em uma caixa escura para ficarem legíveis tanto
     //    sobre o céu quanto sobre o chão.
@@ -290,6 +382,10 @@ std::string HorizonteArtificial::quadro(const Historico& historico) const {
     return saida.str();
 }
 
+
+
+
+
 // TODO (aluno): o horizonte está no mínimo necessário. Melhorias naturais:
 //  * escada de arfagem: linhas a cada 10 graus, com o número ao lado;
 //  * arco de rolagem no topo, com um ponteiro triangular;
@@ -308,3 +404,10 @@ std::string HorizonteArtificial::quadro(const Historico& historico) const {
 
 
 // ./mini_gcs --endereco udpin://:14552 --simulado
+
+
+
+
+
+// cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+// cmake --build build -j$(nproc)
